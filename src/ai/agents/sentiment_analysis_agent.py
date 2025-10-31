@@ -4,7 +4,7 @@ from typing import Dict, Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from .utils import get_context_messages
 from src.ai.llm.model import get_llm, get_llm_alt
-from src.ai.llm.config import SentimentAnalysisConfig
+from src.ai.llm.config_old import SentimentAnalysisConfig
 
 sac = SentimentAnalysisConfig()
 
