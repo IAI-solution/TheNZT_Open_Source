@@ -4,13 +4,13 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 from .utils import get_context_messages_for_response
 from src.ai.llm.model import get_llm, get_llm_alt
-from src.ai.llm.config import MapConfig
+from src.ai.llm.config_old import MapConfig
 from src.ai.ai_schemas.structured_responses import SingleLayerResponse
 from src.ai.agent_prompts.map_agent import SYSTEM_PROMPT
 from src.ai.tools.map_tools import tool_list
 from langgraph.types import Command
 
-mapc = MapConfig
+mapc = MapConfig()
 
 class MapAgent(BaseAgent):
     def __init__(self):

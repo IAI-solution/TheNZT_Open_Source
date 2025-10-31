@@ -7,7 +7,7 @@ from langgraph.prebuilt import create_react_agent
 from .utils import get_context_messages
 from langgraph.prebuilt import create_react_agent
 from src.ai.llm.model import get_llm, get_llm_alt
-from src.ai.llm.config import CodingConfig
+from src.ai.llm.config_old import CodingConfig
 from langgraph.types import Command
 
 cac = CodingConfig()

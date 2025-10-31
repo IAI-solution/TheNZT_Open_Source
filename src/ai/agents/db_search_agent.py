@@ -8,7 +8,7 @@ from langgraph.prebuilt import create_react_agent
 from .utils import get_context_based_answer_prompt, get_context_messages
 from langgraph.types import Command
 from src.ai.llm.model import get_llm, get_llm_alt
-from src.ai.llm.config import DBSearchConfig
+from src.ai.llm.config_old import DBSearchConfig
 
 dbc = DBSearchConfig()
 
