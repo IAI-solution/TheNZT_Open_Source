@@ -70,7 +70,7 @@ class ReportGenerationAgent(BaseAgent):
             # response = self.model.invoke(input=[system_message, human_message])
             agent = create_react_agent(model=self.model, tools=self.tools, prompt=system_message)            
             response = agent.invoke(input)
-            # print(f"response of report generation agent = {response}.") #
+            print(f"response of report generation agent = {response}.") #
 
         except Exception as e:
             print(f"Falling back to alternate model: {str(e)}")
