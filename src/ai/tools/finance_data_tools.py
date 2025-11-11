@@ -32,102 +32,6 @@ currency_api_key = os.getenv("CURRENCY_FREAK_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 tavily_client = TavilyClient(api_key=TAVILY_API_KEY)
 
-
-# class SearchCompanyInfoTool(BaseTool):
-#     name: str = "search_company_info"
-#     description: str = """
-# Use this function to search for the ticker symbol or cryptocurrency symbol for financial instruments, including stocks, cryptocurrencies, forex, ETFs, etc. You can also pass the company name or cryptocurrency name. Multiple company or cryptocurrency names can be passed to this tool.
-# If search for ticker symbol of companies then follow these rules for ticker symbol:
-# - For USA based stock exchanges no suffix is required like TSLA will remain TSLA, APPL will remain APPL, etc.
-# - For DFM stock exchange add .AE like DSI will become DSI.AE, DU will become DU.AE, etc.
-# - For NSE stock exchange add .NS like TATAMOTORS will become TATAMOTORS.NS, RELIANCE will become RELIANCE.NS, etc.
-# - For BSE stock exchange add .BO like TATAMOTORS will become TATAMOTORS.BO, RELIANCE will become RELIANCE.BO, etc.
-
-# The `query` input parameter can be a list of company names, cryptocurrency names, or ticker symbols.
-# """
-
-#     args_schema: Type[BaseModel] = SearchCompanyInfoSchema
-    
-#     def _fetch_fmp_data(self, query: str) -> Union[List[Dict[str, Any]], str]:
-#         try:
-#             # url = f"https://financialmodelingprep.com/api/v3/search?query={query}&apikey={fm_api_key}"
-#             url = f"https://financialmodelingprep.com/stable/search-name?query={query}&apikey={fm_api_key}"
-#             fmp_response = requests.get(url)
-#             return fmp_response.json()
-#         except Exception as e:
-#             return f"Error in getting company information from FMP for {query}: {str(e)}"
-        
-#     def search_company_sync(self, query: str, limit: int = 5) -> Union[Dict[str, Any], str]:
-#         """
-#         Synchronous wrapper: calls async vector/symbol search first,
-#         falls back to FMP REST API if no results or error.
-#         """
-#         try:
-#             result = search_similar_company_name(query, limit)
-#             if result and result.get("results"):
-#                 return result
-#             else:
-#                 logger.warning("Primary search returned empty. Falling back to FMP API.")
-#                 #fallback_result = self._fetch_fmp_data(query)
-#                 return {
-#                     #"results": fallback_result,
-#                     "source": "fmp",
-#                     "timestamp": datetime.now().isoformat()
-#                 }
-#         except Exception as e:
-#             logger.error(f"Primary async search failed: {str(e)}")
-#             try:
-#                 #fallback_result = self._fetch_fmp_data(query)
-#                 return {
-#                     #"results": fallback_result,
-#                     "source": "fmp",
-#                     "timestamp": datetime.now().isoformat()
-#                 }
-#             except Exception as fallback_error:
-#                 return {
-#                     "error": f"Both primary and fallback search failed. Reason: {str(fallback_error)}",
-#                     "timestamp": datetime.now().isoformat()
-#                 }
-            
-#     def _fetch_yf_data(self, query: str) -> Union[Dict[str, Any], str]:
-#         try:
-#             return fetch_company_info(query)  # Assuming this function is defined elsewhere
-#         except Exception as e:
-#             return f"Error in getting company information from YF for {query}: {str(e)}"
-
-#     def _fetch_data_for_single_ticker(self, query: str) -> Dict[str, Any]:
-#         fmp_data = self.search_company_sync(query)
-#         yf_data = self._fetch_yf_data(query)
-        
-#         return {
-#             "ticker": query,
-#             "fmp_data": fmp_data, 
-#             "yf_data": yf_data, 
-#             "source": ["https://site.financialmodelingprep.com/", f"https://finance.yahoo.com/lookup/?s={query}"]
-#         }
-
-#     def _run(self, query: List[str], explanation: str) -> Dict[str, Any]:
-        
-#         results = []
-#         with concurrent.futures.ThreadPoolExecutor(max_workers=len(query)) as executor:
-#             # Submit tasks for each ticker
-#             future_to_ticker = {executor.submit(self._fetch_data_for_single_ticker, ticker): ticker for ticker in query}
-            
-#             for future in concurrent.futures.as_completed(future_to_ticker):
-#                 ticker = future_to_ticker[future]
-#                 try:
-#                     result = future.result()
-#                     results.append(result)
-#                 except Exception as e:
-#                     results.append({
-#                         "ticker": ticker,
-#                         "error": f"Error processing {ticker}: {str(e)}",
-#                         "fmp_data": None,
-#                         "yf_data": None,
-#                         "source": []
-#                     })
-        
-#         return {"results": results}
 class SearchCompanyInfoTool(BaseTool):
     name: str = "search_company_info"
     description: str = """
@@ -167,35 +71,6 @@ class SearchCompanyInfoTool(BaseTool):
         except Exception as e:
             return f"Error in getting company information from FMP for {query}: {str(e)}"
         
-    # def search_company_sync(self, query: QueryRequest, limit: int = 5) -> Union[Dict[str, Any], str]:
-    #     try:
-    #         result = search_similar_company_name(query, limit)
-    #         if result and result.get("results"):
-    #             return result
-    #         else:
-    #             logger.warning("Primary search returned empty. Falling back to FMP API.")
-    #             return {
-    #                 "source": "fmp",
-    #                 "timestamp": datetime.now().isoformat()
-    #             }
-    #     except Exception as e:
-    #         logger.error(f"Primary search failed: {str(e)}")
-    #         try:
-    #             return {
-    #                 "source": "fmp",
-    #                 "timestamp": datetime.now().isoformat()
-    #             }
-    #         except Exception as fallback_error:
-    #             return {
-    #                 "error": f"Both primary and fallback search failed. Reason: {str(fallback_error)}",
-    #                 "timestamp": datetime.now().isoformat()
-    #             }
-            
-    # def _fetch_yf_data(self, query: str) -> Union[Dict[str, Any], str]:
-    #     try:
-    #         return fetch_company_info(query)  # Assuming this function is defined elsewhere
-    #     except Exception as e:
-    #         return f"Error in getting company information from YF for {query}: {str(e)}"
 
     def _fetch_data_for_single_ticker(self, query_request: QueryRequest) -> Dict[str, Any]:
        
@@ -257,832 +132,12 @@ This tool provides information of companies registered."""
         except Exception as e:
             error_msg = f"Error in getting company profile information: {str(e)}"
             return error_msg
-
-
-# class GetStockData(BaseTool):
-#     name: str = "get_stock_data"
-#     description: str = """Use this tool to get real-time stock quote data and historical stock prices of companies. The realtime stock data includes price, changes, market cap, PE ratio, and more.
-#     This tool generates a stock price chart which is only visible to the user.
-# """
-#     args_schema: Type[BaseModel] = StockDataSchema
-
-#     def _run(self, ticker_data: List[TickerSchema], explanation: str = None, period: str = "1M", strictly: bool = False):
-#         def process_ticker(ticker_info):
-#             ticker = ticker_info.ticker
-#             exchange_symbol = ticker_info.exchange_symbol
-#             result = {"realtime": None, "historical": None}
-
-#             # Fetch Real-Time Data
-#             try:
-#                 if exchange_symbol and ticker:
-#                     try:
-#                         # url = f"https://financialmodelingprep.com/api/v3/quote/{ticker}?apikey={fm_api_key}"
-#                         url = f"https://financialmodelingprep.com/stable/quote/?symbol={ticker}&apikey={fm_api_key}"
-#                         currency_url = f'https://financialmodelingprep.com/stable/search-symbol?query={ticker}&apikey={fm_api_key}'
-#                         data = requests.get(url)
-#                         currency_data = requests.get(currency_url).json()
-#                         realtime_response = data.json()
-#                         realtime_currency = currency_data[0]["currency"] if currency_data else "USD"
-#                         realtime_response[0]["currency"] = realtime_currency
-#                         realtime_response = realtime_response[0]
-#                         realtime_response = {k: v for k, v in realtime_response.items() if v is not None}
-#                     except Exception as e:
-#                         realtime_response = {"error": f"Error fetching realtime data from FMP: {str(e)}. Use web search tool for current stock prices."}
-#                 else:
-#                     realtime_response = {"error": "Use web search tool for data not available from FMP."}                 
-
-#                 result["realtime"] = realtime_response
-#             except Exception as e:
-#                 result["realtime"] = {"error": f"Failed to get realtime data: {str(e)}"}
-
-#             try:
-#                 periods = ["1M", "3M", "6M", "YTD", "1Y", "5Y", "MAX"]   
-
-#                 if exchange_symbol and ticker:
-#                     try:
-#                         historical_data = None
-#                         successful_period_index = None
-#                         if not strictly:
-#                             for i, p in enumerate(periods):
-#                                 print(f"Trying period: {p}")
-#                                 historical_data = mongodb.get_or_update_historical(ticker, p)
-                                
-#                                 if historical_data and len(historical_data) > 0:
-#                                     successful_period_index = i
-#                                     print(f"Data found for period: {p}")
-#                                     break
-#                                 else:
-#                                     print(f"No data found for period: {p}")
-#                         else:
-#                             historical_data = mongodb.get_or_update_historical(ticker, period)
-
-#                         if 'historical' in historical_data and historical_data['historical']:
-#                             result["historical"] = {"source": "https://financialmodelingprep.com/"}
-#                             if strictly:
-#                                 result["historical"]["period"] = period
-#                             else:
-#                                 result["historical"]["period"]  = periods[successful_period_index:]
-
-#                             raw_data = historical_data['historical']
-#                             formatted_data = convert_fmp_to_json(raw_data, ticker)
-#                         else:
-#                             raise RuntimeError("No data available after filtering")
-
-#                         result["historical"]["data"] = formatted_data
-#                         # Check last 5 days activity
-#                         today = datetime.now().date()
-
-#                         # Get the last entry assuming it's the most recent date
-#                         data_list = []
-#                         if isinstance(historical_data, dict):
-#                             data_list = historical_data.get("historical", []) or historical_data.get("data", [])
-#                         elif isinstance(historical_data, list):
-#                             data_list = historical_data
-
-#                         # Take the last available record
-#                         last_entry = data_list[0] if data_list else None
-
-#                         if last_entry:
-#                             date_str = last_entry.get("date", "")
-#                             try:
-#                                 if "-" in date_str:
-#                                     last_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-#                                 else:
-#                                     last_date = datetime.strptime(date_str, "%b %d, %Y").date()
-
-#                                 days_diff = (today - last_date).days
-#                                 result["historical"]["is_active"] = False if days_diff > 5 else True
-#                             except Exception:
-#                                 result["historical"]["is_active"] = False
-#                         else:
-#                             result["historical"]["is_active"] = False
-
-                        
-
-#                     except Exception as e:
-#                         result["historical"] = {
-#                             "error": f"Error fetching historical data from FMP: {str(e)}. Use web search tool for historical stock data.",
-#                             "data": [],
-#                             "source": "FMP API failed"
-#                         }                       
-#                 else:
-#                     historical_data = {"error": "Use web search tool for data not available from FMP."}
-#             except Exception as e:
-#                 error_msg = f"Stock history scrapping error: {e}"
-#                 print(error_msg)
-#                 result["historical"] = {"error": error_msg}
-    
-#             if (not 'error' in result['historical']) and (not 'error' in result['realtime']):
-#                 result['message'] = "A graph has been generated and shown to the user so do not include this data in the response."
-#             else:
-#                 result['message'] = "Generate a graph based on this data which is visible to the user."
-#             return result
-        
-#         all_results = []
-#         with concurrent.futures.ThreadPoolExecutor(max_workers=len(ticker_data)) as executor:
-#             future_to_ticker = {executor.submit(process_ticker, ticker_info): ticker_info for ticker_info in ticker_data}
-#             for future in concurrent.futures.as_completed(future_to_ticker):
-#                 ticker_info = future_to_ticker[future]
-#                 try:
-#                     result = future.result()
-#                     all_results.append(result)
-#                 except Exception as e:
-#                     error_msg = f"Processing of {ticker_info.ticker} generated an exception: {str(e)}"
-#                     print(error_msg)
-
-#         return all_results
-
-
-# class GetStockData(BaseTool):
-#     name: str = "get_stock_data"
-#     description: str = """Use this tool to get real-time stock quote data and historical stock prices of companies. The realtime stock data includes price, changes, market cap, PE ratio, and more.
-#     This tool generates a stock price chart which is only visible to the user.
-#     """
-#     args_schema: Type[BaseModel] = StockDataSchema
-
-#     _YF_PERIOD_MAP = {
-#         "1M": "1mo",
-#         "3M": "3mo",
-#         "6M": "6mo",
-#         "YTD": "ytd",
-#         "1Y": "1y",
-#         "5Y": "5y",
-#         "MAX": "max"
-#     }
-    
-#     def _candidate_yf_tickers(self, ticker: str, exchange_symbol: Optional[str]) -> List[str]:
-#         if not ticker:
-#             return []
-#         candidates = [ticker]
-#         base = ticker
-#         for suf in [".NS", ".BO", ".L", ".SA", ".TO", ".AX", ".TW"]:
-#             if ticker.endswith(suf):
-#                 base = ticker[: -len(suf)]
-#                 break
-#         if exchange_symbol:
-#             exch = exchange_symbol.upper()
-#             if exch == "NSE" and f"{base}.NS" not in candidates:
-#                 candidates.append(f"{base}.NS")
-#             if exch == "BSE" and f"{base}.BO" not in candidates:
-#                 candidates.append(f"{base}.BO")
-#             if base not in candidates:
-#                 candidates.append(base)
-#         else:
-#             for suf in [".NS", ".BO"]:
-#                 variant = f"{base}{suf}"
-#                 if variant not in candidates:
-#                     candidates.append(variant)
-#             if base not in candidates:
-#                 candidates.append(base)
-        
-#         seen = set()
-#         out = []
-#         for c in candidates:
-#             if c not in seen:
-#                 seen.add(c)
-#                 out.append(c)
-#         return out
-
-#     def _yf_realtime(self, ticker: str) -> dict:
-#         t = yf.Ticker(ticker)
-#         price = None
-#         ts = None
-#         used = None
-
-#         # intraday stock history 
-#         try:
-#             for intraday_period, intraday_interval in (("1d", "1m"), ("5d", "5m")):
-#                 try:
-#                     hist = t.history(period=intraday_period, interval=intraday_interval, actions=False)
-#                     if hist is not None and not hist.empty:
-#                         if isinstance(hist, pd.Series):
-#                             hist = hist.to_frame().T
-#                         last = hist.iloc[-1]
-#                         price_candidate = last.get("Close", None) or last.get("close", None)
-#                         if price_candidate is not None and not pd.isna(price_candidate):
-#                             price = float(price_candidate)
-#                             idx = last.name
-#                             ts = idx.isoformat() if hasattr(idx, "isoformat") else str(idx)
-#                             used = f"history({intraday_period},{intraday_interval})"
-#                             break
-#                 except Exception:
-#                     continue
-#         except Exception:
-#             pass
-
-#         # multi-day
-#         if price is None:
-#             try:
-#                 hist2 = t.history(period="7d", interval="1d", actions=False)
-#                 if hist2 is not None and not hist2.empty:
-#                     if isinstance(hist2, pd.Series):
-#                         hist2 = hist2.to_frame().T
-#                     last = hist2.iloc[-1]
-#                     pc = last.get("Close", None) or last.get("close", None)
-#                     if pc is not None and not pd.isna(pc):
-#                         price = float(pc)
-#                         idx = last.name
-#                         ts = idx.isoformat() if hasattr(idx, "isoformat") else str(idx)
-#                         used = "history(7d,1d)"
-#             except Exception:
-#                 pass
-
-#         if price is None:
-#             try:
-#                 fi = getattr(t, "fast_info", None)
-#                 if fi:
-#                     for k in ("lastPrice", "last_trade_price", "last_price", "last"):
-#                         if isinstance(fi, dict) and fi.get(k) is not None:
-#                             price = float(fi[k])
-#                             used = f"fast_info[{k}]"
-#                             break
-#                     if price is None:
-#                         try:
-#                             if hasattr(fi, "get") and fi.get("lastPrice"):
-#                                 price = float(fi.get("lastPrice"))
-#                                 used = "fast_info[lastPrice]"
-#                         except Exception:
-#                             pass
-#             except Exception:
-#                 pass
-
-#         # fallback
-#         info = {}
-#         try:
-#             info = t.info or {}
-#         except Exception:
-#             info = {}
-
-#         if price is None:
-#             try:
-#                 cand = info.get("regularMarketPrice") or info.get("previousClose") or info.get("currentPrice") or info.get("price")
-#                 if cand is not None and not pd.isna(cand):
-#                     try:
-#                         price = float(cand)
-#                         used = "info"
-#                     except Exception:
-#                         price = None
-#             except Exception:
-#                 pass
-
-#         # timestamp fallback
-#         if not ts:
-#             try:
-#                 rmt = info.get("regularMarketTime") or info.get("regularMarketPreviousCloseTime")
-#                 if isinstance(rmt, (int, float)):
-#                     try:
-#                         ts = datetime.fromtimestamp(int(rmt), tz=timezone.utc).isoformat()
-#                     except Exception:
-#                         ts = None
-#             except Exception:
-#                 ts = None
-#         if not ts:
-#             ts = datetime.now(timezone.utc).isoformat()
-
-#         change = None
-#         marketCap = None
-#         currency = None
-#         try:
-#             change = info.get("regularMarketChange") or info.get("change")
-#         except Exception:
-#             change = None
-#         try:
-#             marketCap = info.get("marketCap")
-#         except Exception:
-#             marketCap = None
-#         try:
-#             currency = info.get("currency") or (info.get("currency_symbol") if info.get("currency_symbol") else None)
-#         except Exception:
-#             currency = None
-
-#         # attach a company name (for streaming to frontend)
-#         name = None
-#         try:
-#             for k in ("shortName", "longName", "name"):
-#                 cand = info.get(k)
-#                 if cand:
-#                     name = cand
-#                     break
-#             if not name and isinstance(info.get("longBusinessSummary"), str):
-#                 name = info.get("longBusinessSummary")[:200]
-#         except Exception:
-#             name = None
-
-#         realtime = {
-#             "symbol": ticker,
-#             "price": price if price is not None else None,
-#             "change": change if change is not None else None,
-#             "marketCap": marketCap if marketCap is not None else None,
-#             "currency": currency if currency is not None else "USD",
-#             "timestamp": ts,
-#             "_yf_used": used or "none"
-#         }
-
-#         if name:
-#             realtime["name"] = name
-#             realtime["companyName"] = name
-
-#         return {k: v for k, v in realtime.items() if v is not None}
-
-#     # helpers for historical formatting
-#     def _to_str_num(self, v, pick_key=None):
-#         """
-#         Return (string_value, numeric_value) for v. If v is Series/array/list pick first non-null.
-#         """
-#         try:
-#             if isinstance(v, (pd.Series, pd.DataFrame)):
-#                 if isinstance(v, pd.DataFrame):
-#                     v = v.iloc[:, 0]
-#                 if pick_key is not None and isinstance(v, pd.Series) and pick_key in v.index:
-#                     val = v[pick_key]
-#                 else:
-#                     try:
-#                         val = v.dropna().iloc[0]
-#                     except Exception:
-#                         val = v.iloc[0] if len(v) > 0 else None
-#                 v = val
-#             if isinstance(v, (list, tuple, np.ndarray)):
-#                 # pick first non-null
-#                 v = next((x for x in v if x is not None and not (isinstance(x, float) and np.isnan(x))), None)
-#             if hasattr(v, "item"):
-#                 try:
-#                     v = v.item()
-#                 except Exception:
-#                     pass
-#             if v is None or pd.isna(v):
-#                 return None, None
-#             if isinstance(v, (int, float, np.integer, np.floating)):
-#                 s = ("{:.8f}".format(float(v))).rstrip("0").rstrip(".")
-#                 return s, float(v)
-#             if isinstance(v, str):
-#                 vs = v.replace(",", "").strip()
-#                 try:
-#                     n = float(vs)
-#                     s = ("{:.8f}".format(n)).rstrip("0").rstrip(".")
-#                     return s, n
-#                 except Exception:
-#                     return v, None
-#             try:
-#                 n = float(v)
-#                 s = ("{:.8f}".format(n)).rstrip("0").rstrip(".")
-#                 return s, n
-#             except Exception:
-#                 return str(v), None
-#         except Exception:
-#             try:
-#                 return str(v), None
-#             except Exception:
-#                 return None, None
-
-#     def _fmt_vol(self, v, pick_key=None):
-#         try:
-#             if isinstance(v, (pd.Series, pd.DataFrame)):
-#                 if isinstance(v, pd.DataFrame):
-#                     v = v.iloc[:, 0]
-#                 if pick_key is not None and isinstance(v, pd.Series) and pick_key in v.index:
-#                     v = v[pick_key]
-#                 else:
-#                     try:
-#                         v = v.dropna().iloc[0]
-#                     except Exception:
-#                         v = v.iloc[0] if len(v) > 0 else None
-#             if isinstance(v, (list, tuple, np.ndarray)):
-#                 v = next((x for x in v if x is not None and not (isinstance(x, float) and np.isnan(x))), None)
-#             if v is None or pd.isna(v):
-#                 return None
-#             return int(float(str(v).replace(",", "")))
-#         except Exception:
-#             return None
-
-#     def _safe_date_val(self, val, fallback=None):
-#         try:
-#             if isinstance(val, (pd.Series, pd.DataFrame)):
-#                 if isinstance(val, pd.DataFrame):
-#                     val = val.iloc[:, 0]
-#                 try:
-#                     val = val.dropna().iloc[0]
-#                 except Exception:
-#                     try:
-#                         val = val.iloc[0]
-#                     except Exception:
-#                         val = fallback
-#             if isinstance(val, (list, tuple, np.ndarray)):
-#                 val = next((x for x in val if x is not None and not (isinstance(x, float) and np.isnan(x))), fallback)
-#             if val is None:
-#                 val = fallback
-#             if hasattr(val, "strftime"):
-#                 return val.strftime("%b %d, %Y")
-#             parsed = pd.to_datetime(val, errors="coerce")
-#             if parsed is pd.NaT or parsed is None:
-#                 return str(val) if val is not None else ""
-#             return parsed.strftime("%b %d, %Y")
-#         except Exception:
-#             try:
-#                 return str(val)
-#             except Exception:
-#                 return ""
-
-#     def _extract_ticker_subframe(self, df, requested_ticker):
-#         """
-#         If df has MultiIndex columns because yf.download returned multiple tickers,
-#         attempt to extract the subframe for requested_ticker.
-#         """
-#         try:
-#             if not isinstance(df, pd.DataFrame):
-#                 return df
-#             if isinstance(df.columns, pd.MultiIndex):
-#                 cols = df.columns
-#                 base = requested_ticker.split(".")[0] if "." in requested_ticker else requested_ticker
-#                 candidates = [requested_ticker, base]
-#                 for level in [1, 0]:
-#                     labels = [str(x) for x in cols.get_level_values(level)]
-#                     for cand in candidates:
-#                         if cand in labels:
-#                             try:
-#                                 sub = df.xs(cand, axis=1, level=level, drop_level=True)
-#                                 return sub
-#                             except Exception:
-#                                 try:
-#                                     sub = df.loc[:, df.columns.get_level_values(level) == cand]
-#                                     if isinstance(sub.columns, pd.MultiIndex):
-#                                         sub.columns = sub.columns.droplevel(level)
-#                                     return sub
-#                                 except Exception:
-#                                     continue
-#                 # fallback: return first ticker group if nothing matches
-#                 try:
-#                     lvl1 = list(dict.fromkeys(df.columns.get_level_values(1)))
-#                     if lvl1:
-#                         sub = df.xs(lvl1[0], axis=1, level=1, drop_level=True)
-#                         return sub
-#                 except Exception:
-#                     pass
-#             return df
-#         except Exception:
-#             return df
-
-#     # historical attempts
-#     def _yf_historical_try_methods(self, ticker: str, desired_period: str) -> dict:
-#         """
-#         Returns {"historical": [...]} where each record: date (e.g. 'Sep 16, 2025'),
-#         open, open_num, high, high_num, low, low_num, close, close_num, volume, ticker
-#         newest-first.
-#         """
-#         yf_period = self._YF_PERIOD_MAP.get(desired_period, "1mo")
-
-#         # yf.download
-#         try:
-#             df = yf.download(ticker, period=yf_period, progress=False, threads=False, auto_adjust=False)
-#             if df is not None and not df.empty:
-#                 df = self._extract_ticker_subframe(df, ticker)
-#                 if df is not None and not df.empty:
-#                     if isinstance(df, pd.Series):
-#                         df = df.to_frame().T
-#                     df = df.reset_index()
-#                     out = []
-#                     for _, row in df.iterrows():
-#                         date_val = row.get("Date", getattr(row, "name", None))
-#                         date_str = self._safe_date_val(date_val, fallback=row.name)
-#                         open_s, open_n = self._to_str_num(row.get("Open") if "Open" in row else row.get("open"))
-#                         high_s, high_n = self._to_str_num(row.get("High") if "High" in row else row.get("high"))
-#                         low_s, low_n = self._to_str_num(row.get("Low") if "Low" in row else row.get("low"))
-#                         close_s, close_n = self._to_str_num(row.get("Close") if "Close" in row else row.get("close"))
-#                         vol_i = self._fmt_vol(row.get("Volume") if "Volume" in row else row.get("volume"))
-#                         out.append({
-#                             "date": date_str,
-#                             "open": open_s,
-#                             "open_num": open_n,
-#                             "high": high_s,
-#                             "high_num": high_n,
-#                             "low": low_s,
-#                             "low_num": low_n,
-#                             "close": close_s,
-#                             "close_num": close_n,
-#                             "volume": vol_i,
-#                             "ticker": ticker
-#                         })
-#                     # out = list(reversed(out))  
-#                     return {"historical": out}
-#         except Exception as e:
-#             print(f"[DEBUG] yf.download failed for {ticker} period={yf_period}: {e}")
-
-#         # ticker.history
-#         try:
-#             t = yf.Ticker(ticker)
-#             end = datetime.now()
-#             days_map = {"1M": 30, "3M": 90, "6M": 180, "YTD": 365, "1Y": 365, "5Y": 365*5, "MAX": 365*20}
-#             days = days_map.get(desired_period, 30)
-#             start = end - timedelta(days=days)
-#             df2 = t.history(start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"), interval="1d", actions=False)
-#             if df2 is not None and not df2.empty:
-#                 df2 = self._extract_ticker_subframe(df2, ticker)
-#                 if isinstance(df2, pd.Series):
-#                     df2 = df2.to_frame().T
-#                 df2 = df2.reset_index()
-#                 out = []
-#                 for _, row in df2.iterrows():
-#                     date_val = row.get("Date", getattr(row, "name", None))
-#                     date_str = self._safe_date_val(date_val, fallback=row.name)
-#                     open_s, open_n = self._to_str_num(row.get("Open") if "Open" in row else row.get("open"))
-#                     high_s, high_n = self._to_str_num(row.get("High") if "High" in row else row.get("high"))
-#                     low_s, low_n = self._to_str_num(row.get("Low") if "Low" in row else row.get("low"))
-#                     close_s, close_n = self._to_str_num(row.get("Close") if "Close" in row else row.get("close"))
-#                     vol_i = self._fmt_vol(row.get("Volume") if "Volume" in row else row.get("volume"))
-#                     out.append({
-#                         "date": date_str,
-#                         "open": open_s,
-#                         "open_num": open_n,
-#                         "high": high_s,
-#                         "high_num": high_n,
-#                         "low": low_s,
-#                         "low_num": low_n,
-#                         "close": close_s,
-#                         "close_num": close_n,
-#                         "volume": vol_i,
-#                         "ticker": ticker
-#                     })
-#                 # out = list(reversed(out))
-#                 return {"historical": out}
-#         except Exception as e:
-#             print(f"[DEBUG] Ticker.history failed for {ticker}: {e}")
-
-#         return {"historical": []}
-
-#     def _try_yf_multi_periods(self, ticker: str, desired_period: str = "1M"):
-#         period_seq = []
-#         if desired_period and desired_period in self._YF_PERIOD_MAP:
-#             period_seq.append(desired_period)
-#         fallback_order = ["1M", "3M", "6M", "YTD", "1Y", "5Y", "MAX"]
-#         for p in fallback_order:
-#             if p not in period_seq:
-#                 period_seq.append(p)
-#         for p in period_seq:
-#             try:
-#                 hist = self._yf_historical_try_methods(ticker, p)
-#                 lst = hist.get("historical") or []
-#                 if lst:
-#                     return (p, lst)
-#             except Exception as e:
-#                 print(f"[_try_yf_multi_periods] yfinance failed for {ticker} period {p}: {e}")
-#                 continue
-#         return (None, [])
-
-#     def _fetch_historical_from_yf_and_format(self, ticker: str, desired_period: str = "1M"):
-#         res = self._yf_historical_try_methods(ticker, desired_period).get("historical", []) or []
-#         return res if res else None
-
-#     def _normalize_historical_payload(self, historical_data):
-#         if not historical_data:
-#             return None
-#         if isinstance(historical_data, list):
-#             return historical_data if historical_data else None
-#         if isinstance(historical_data, dict):
-#             for key in ("historical", "data", "rows", "results"):
-#                 if key in historical_data and isinstance(historical_data[key], list) and historical_data[key]:
-#                     return historical_data[key]
-#             for v in historical_data.values():
-#                 if isinstance(v, list) and v:
-#                     return v
-#         return None
-
-#     def _ensure_newest_first(self, lst):
-#         if not lst:
-#             return lst
-#         try:
-#             return sorted(lst, key=lambda r: pd.to_datetime(r.get("date")), reverse=True)
-#         except Exception:
-#             return lst
-
-#     # main runner 
-#     def _run(self, ticker_data: List[TickerSchema], explanation: str = None, period: str = "1M", strictly: bool = False):
-#         def process_ticker(ticker_info):
-#             ticker = getattr(ticker_info, "ticker", None)
-#             exchange_symbol = getattr(ticker_info, "exchange_symbol", None)
-#             result = {"realtime": None, "historical": None}
-
-#             # Realtime (FMP -> yfinance fallback)
-#             realtime_response = None
-#             try:
-#                 if exchange_symbol and ticker:
-#                     try:
-#                         url = f"https://financialmodelingprep.com/stable/quote/?symbol={ticker}&apikey={fm_api_key}"
-#                         currency_url = f'https://financialmodelingprep.com/stable/search-symbol?query={ticker}&apikey={fm_api_key}'
-#                         data_resp = requests.get(url, timeout=10)
-#                         search_resp = requests.get(currency_url, timeout=8)
-#                         if data_resp.ok:
-#                             fmp_json = data_resp.json()
-#                         else:
-#                             print(f"[DEBUG] FMP realtime status {data_resp.status_code} for {ticker}")
-#                             fmp_json = None
-#                         if isinstance(fmp_json, list) and len(fmp_json) > 0 and isinstance(fmp_json[0], dict):
-#                             realtime_response = dict(fmp_json[0])
-#                             if search_resp.ok:
-#                                 currency_json = search_resp.json()
-#                                 if isinstance(currency_json, list) and len(currency_json) > 0 and isinstance(currency_json[0], dict):
-#                                     realtime_response["currency"] = currency_json[0].get("currency", realtime_response.get("currency", "USD"))
-#                                 else:
-#                                     realtime_response.setdefault("currency", realtime_response.get("currency", "USD"))
-#                             else:
-#                                 realtime_response.setdefault("currency", realtime_response.get("currency", "USD"))
-#                         else:
-#                             cand = self._candidate_yf_tickers(ticker, exchange_symbol)
-#                             for c in cand:
-#                                 try:
-#                                     rt = self._yf_realtime(c)
-#                                     if rt and rt.get("price") is not None:
-#                                         realtime_response = rt
-#                                         break
-#                                 except Exception:
-#                                     continue
-#                             if realtime_response is None:
-#                                 realtime_response = {"error": "Failed to fetch realtime from FMP and yfinance."}
-#                     except Exception as e_fmp_rt:
-#                         print(f"[DEBUG] FMP realtime exception for {ticker}: {e_fmp_rt}")
-#                         realtime_response = self._yf_realtime(ticker)
-#                 else:
-#                     realtime_response = {"error": "Use web search tool for data not available from FMP."}
-#             except Exception as e:
-#                 realtime_response = {"error": f"Failed to get realtime data: {str(e)}"}
-
-#             # ensure symbol/timestamp/companyName exist
-#             if isinstance(realtime_response, dict) and "symbol" not in realtime_response:
-#                 realtime_response["symbol"] = ticker
-#             if isinstance(realtime_response, dict):
-#                 if "timestamp" not in realtime_response or not realtime_response.get("timestamp"):
-#                     realtime_response["timestamp"] = datetime.now(timezone.utc).isoformat()
-#                 if "companyName" not in realtime_response and "name" in realtime_response:
-#                     realtime_response["companyName"] = realtime_response.get("name")
-#             result["realtime"] = {k: v for k, v in (realtime_response or {}).items() if v is not None}
-
-#             # Historical: try DB/FMP -> if 402 fallback to yfinance (and upsert optionally)
-#             try:
-#                 periods = ["1M", "3M", "6M", "YTD", "1Y", "5Y", "MAX"]
-#                 historical_data = None
-#                 successful_period_index = None
-#                 fmp_payment_required = False
-
-#                 if exchange_symbol and ticker:
-#                     try:
-#                         if not strictly:
-#                             for i, p in enumerate(periods):
-#                                 try:
-#                                     hist = mongodb.get_or_update_historical(ticker, p)
-#                                     print(f"[DEBUG] mongodb.get_or_update_historical({ticker}, {p}) returned type={type(hist)}")
-#                                     normalized = self._normalize_historical_payload(hist)
-#                                     if normalized:
-#                                         historical_data = normalized
-#                                         successful_period_index = i
-#                                         break
-#                                 except Exception as e_db:
-#                                     txt = str(e_db).lower()
-#                                     print(f"[ERROR] mongodb fetch failed for {ticker}: {e_db}")
-#                                     if "402" in txt or "payment required" in txt or ("payment" in txt and "required" in txt):
-#                                         print(f"[WARN] Detected FMP payment required for {ticker}; falling back to yfinance.")
-#                                         fmp_payment_required = True
-#                                         historical_data = None
-#                                         break
-#                                     else:
-#                                         continue
-#                         else:
-#                             try:
-#                                 hist = mongodb.get_or_update_historical(ticker, period)
-#                                 historical_data = self._normalize_historical_payload(hist)
-#                             except Exception as e_db:
-#                                 txt = str(e_db).lower()
-#                                 print(f"[ERROR] strict mongodb fetch failed: {e_db}")
-#                                 if "402" in txt or "payment required" in txt:
-#                                     fmp_payment_required = True
-#                                     historical_data = None
-#                                 else:
-#                                     historical_data = None
-#                     except Exception as e_db_outer:
-#                         print(f"[ERROR] mongodb outer exception for {ticker}: {e_db_outer}")
-#                         historical_data = None
-#                 else:
-#                     historical_data = None
-
-#                 if historical_data:
-#                     try:
-#                         formatted_data = convert_fmp_to_json(historical_data, ticker)
-#                     except Exception as e_conv:
-#                         print(f"[WARN] convert_fmp_to_json failed for {ticker}: {e_conv}; using passthrough normalized data")
-#                         formatted_data = self._ensure_newest_first(historical_data)
-#                     formatted_data = self._ensure_newest_first(formatted_data)
-#                     result["historical"] = {"source": "https://financialmodelingprep.com/"}
-#                     result["historical"]["period"] = period if strictly else periods[successful_period_index:]
-#                     result["historical"]["data"] = formatted_data
-#                 else:
-#                     yf_success = False
-#                     candidates = self._candidate_yf_tickers(ticker, exchange_symbol)
-#                     for cand in candidates:
-#                         chosen_period, yf_list = self._try_yf_multi_periods(cand, desired_period=period if strictly else "1M")
-#                         if yf_list:
-#                             # normalise records for frontend expectations
-#                             for rec in yf_list:
-#                                 rec.setdefault("ticker", ticker)
-#                                 try:
-#                                     dt = pd.to_datetime(rec.get("date"), errors="coerce")
-#                                     if not pd.isna(dt):
-#                                         rec["date"] = dt.strftime("%b %d, %Y")
-#                                 except Exception:
-#                                     pass
-#                                 if ("open" not in rec or rec.get("open") is None) and rec.get("open_num") is not None:
-#                                     rec["open"] = ("{:.8f}".format(rec["open_num"])).rstrip("0").rstrip(".")
-#                                 if ("high" not in rec or rec.get("high") is None) and rec.get("high_num") is not None:
-#                                     rec["high"] = ("{:.8f}".format(rec["high_num"])).rstrip("0").rstrip(".")
-#                                 if ("close" not in rec or rec.get("close") is None) and rec.get("close_num") is not None:
-#                                     rec["close"] = ("{:.8f}".format(rec["close_num"])).rstrip("0").rstrip(".")
-#                             result["historical"] = {"source": "yfinance", "period": chosen_period or (period if strictly else "1M"), "data": yf_list}
-#                             yf_success = True
-#                             break
-
-#                     # final fallback explicit fetch & format
-#                     if not yf_success:
-#                         fallback_data = self._fetch_historical_from_yf_and_format(ticker, period if strictly else "1M")
-#                         if fallback_data:
-#                             result["historical"] = {"source": "yfinance", "period": (period if strictly else "1M"), "data": fallback_data}
-#                             try:
-#                                 if hasattr(mongodb, "upsert_historical_raw"):
-#                                     try:
-#                                         mongodb.upsert_historical_raw(ticker, fallback_data, source="yfinance")
-#                                     except Exception:
-#                                         pass
-#                             except Exception:
-#                                 pass
-#                             yf_success = True
-
-#                     if not yf_success:
-#                         result["historical"] = {"error": "No data available after filtering", "data": [], "source": "FMP+yfinance failed"}
-#             except Exception as e:
-#                 print(f"[ERROR] historical section failed for {ticker}: {e}")
-#                 result["historical"] = {"error": f"Stock history scrapping error: {e}", "data": [], "source": None}
-
-#             # is_active
-#             try:
-#                 data_list = []
-#                 if isinstance(result.get("historical"), dict):
-#                     data_list = result["historical"].get("data", []) or []
-#                 elif isinstance(result.get("historical"), list):
-#                     data_list = result["historical"]
-#                 last_entry = data_list[0] if data_list else None
-#                 if last_entry:
-#                     date_str = last_entry.get("date", "")
-#                     try:
-#                         if "-" in date_str:
-#                             last_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-#                         else:
-#                             last_date = datetime.strptime(date_str, "%b %d, %Y").date()
-#                         days_diff = (datetime.now().date() - last_date).days
-#                         result["historical"]["is_active"] = False if days_diff > 5 else True
-#                     except Exception:
-#                         result["historical"]["is_active"] = False
-#                 else:
-#                     if isinstance(result.get("historical"), dict):
-#                         result["historical"]["is_active"] = False
-#             except Exception:
-#                 if isinstance(result.get("historical"), dict):
-#                     result["historical"]["is_active"] = False
-#                 else:
-#                     result["historical"] = {"error": "is_active check failed", "data": result.get("historical", {})}
-
-#             try:
-#                 if (not isinstance(result.get('historical', {}), dict) or 'error' not in result['historical']) and (not isinstance(result.get('realtime', {}), dict) or 'error' not in result['realtime']):
-#                     result['message'] = "A graph has been generated and shown to the user so do not include this data in the response."
-#                 else:
-#                     result['message'] = "Generate a graph based on this data which is visible to the user."
-#             except Exception:
-#                 result['message'] = "Generate a graph based on this data which is visible to the user."
-
-#             return result
-
-#         all_results = []
-#         if not ticker_data:
-#             return all_results
-#         with concurrent.futures.ThreadPoolExecutor(max_workers=len(ticker_data)) as executor:
-#             future_to_ticker = {executor.submit(process_ticker, ticker_info): ticker_info for ticker_info in ticker_data}
-#             for future in concurrent.futures.as_completed(future_to_ticker):
-#                 ticker_info = future_to_ticker[future]
-#                 try:
-#                     res = future.result()
-#                     if not isinstance(res, dict):
-#                         res = {"realtime": {"symbol": getattr(ticker_info, "ticker", "unknown"), "timestamp": datetime.now(timezone.utc).isoformat()}, "historical": {"data": []}, "message": "Generate a graph based on this data which is visible to the user."}
-#                     if "historical" not in res or not isinstance(res["historical"], dict):
-#                         res.setdefault("historical", {"data": []})
-#                     if "data" not in res["historical"]:
-#                         res["historical"].setdefault("data", [])
-#                     all_results.append(res)
-#                 except Exception as e:
-#                     print(f"[ERROR] processing worker failed: {e}")
-#                     fallback = {"realtime": {"symbol": getattr(ticker_info, "ticker", "unknown"), "timestamp": datetime.now(timezone.utc).isoformat()}, "historical": {"data": [], "error": str(e)}, "message": "Generate a graph based on this data which is visible to the user."}
-#                     all_results.append(fallback)
-#         return all_results
-
 class GetStockData(BaseTool):
     name: str = "get_stock_data"
     description: str = """Use this tool to get real-time stock quote data and historical stock prices of companies.
     This tool generates a stock price chart which is only visible to the user.
     """
-    args_schema: Type[BaseModel] = StockDataSchema  
+    args_schema: Type[BaseModel] = StockDataSchema
 
     _YF_PERIOD_MAP = {
         "1M": "1mo",
@@ -1127,49 +182,38 @@ class GetStockData(BaseTool):
         return out
 
     def _yf_realtime(self, ticker: str) -> dict:
-        """Fetch realtime data including Open, High, Low, Close, Volume, PE Ratio from yfinance"""
+        """Fetch realtime data from yfinance, with open/high/low/volume/pe/marketCap/yearHigh/yearLow."""
         t = yf.Ticker(ticker)
-
         price = None
-        open_price = None
-        high_price = None
-        low_price = None
-        volume = None
-        year_high = None
-        year_low = None
         ts = None
         used = None
 
-        # Try intraday then 7d/5d daily
+        # Try intraday history for freshest close
         try:
-            for intraday_period, intraday_interval in (("1d", "1m"), ("5d", "5m")):
+            for p, interval in (("1d", "1m"), ("5d", "5m")):
                 try:
-                    hist = t.history(period=intraday_period, interval=intraday_interval, actions=False)
+                    hist = t.history(period=p, interval=interval, actions=False)
                     if hist is not None and not hist.empty:
-                        if isinstance(hist, pd.Series):
-                            hist = hist.to_frame().T
                         last = hist.iloc[-1]
-                        close_candidate = last.get("Close", None) or last.get("close", None)
+                        close_candidate = last.get("Close") or last.get("close")
                         if close_candidate is not None and not pd.isna(close_candidate):
                             price = float(close_candidate)
                             idx = last.name
                             ts = idx.isoformat() if hasattr(idx, "isoformat") else str(idx)
-                            used = f"history({intraday_period},{intraday_interval})"
+                            used = f"history({p},{interval})"
                             break
                 except Exception:
-                    continue
+                    pass
         except Exception:
             pass
 
-        # multi-day daily
+        # fallback to recent daily
         if price is None:
             try:
                 hist2 = t.history(period="7d", interval="1d", actions=False)
                 if hist2 is not None and not hist2.empty:
-                    if isinstance(hist2, pd.Series):
-                        hist2 = hist2.to_frame().T
                     last = hist2.iloc[-1]
-                    pc = last.get("Close", None) or last.get("close", None)
+                    pc = last.get("Close") or last.get("close")
                     if pc is not None and not pd.isna(pc):
                         price = float(pc)
                         idx = last.name
@@ -1178,49 +222,36 @@ class GetStockData(BaseTool):
             except Exception:
                 pass
 
-        # fast_info fallback
-        if price is None:
-            try:
-                fi = getattr(t, "fast_info", None)
-                if fi:
-                    if isinstance(fi, dict):
-                        for k in ("lastPrice", "last_trade_price", "last_price", "last"):
-                            if fi.get(k) is not None:
-                                price = float(fi[k])
-                                used = f"fast_info[{k}]"
-                                break
-                    else:
-                        # sometimes fast_info is object-like
-                        try:
-                            lastp = fi.get("lastPrice") if hasattr(fi, "get") else None
-                            if lastp:
-                                price = float(lastp)
-                                used = "fast_info[lastPrice]"
-                        except Exception:
-                            pass
-            except Exception:
-                pass
-
-        # info fallback
+        # get info (fast_info / info)
         info = {}
         try:
-            info = t.info or {}
+            info = t.fast_info or (t.info or {})
         except Exception:
-            info = {}
+            try:
+                info = t.info or {}
+            except Exception:
+                info = {}
+
+        # info-based fallbacks
+        def _g(*keys):
+            for k in keys:
+                v = info.get(k)
+                if v is not None:
+                    return v
+            return None
 
         if price is None:
+            cand = _g("regularMarketPrice", "currentPrice", "previousClose", "lastPrice", "price")
             try:
-                cand = info.get("regularMarketPrice") or info.get("previousClose") or info.get("currentPrice") or info.get("price")
                 if cand is not None and not pd.isna(cand):
                     price = float(cand)
                     used = "info"
             except Exception:
                 pass
 
-        # timestamp fallback
         if not ts:
             try:
-                rmt = info.get("regularMarketTime") or info.get("regularMarketPreviousCloseTime")
+                rmt = _g("regularMarketTime", "regularMarketPreviousCloseTime")
                 if isinstance(rmt, (int, float)):
                     ts = datetime.fromtimestamp(int(rmt), tz=timezone.utc).isoformat()
             except Exception:
@@ -1228,71 +259,74 @@ class GetStockData(BaseTool):
         if not ts:
             ts = datetime.now(timezone.utc).isoformat()
 
-        change = None
-        change_percent = None
-        previous_close = None
-        marketCap = None
-        pe_ratio = None
-        currency = None
+        open_price = _g("open", "regularMarketOpen", "previousOpen")
+        high_price = _g("dayHigh", "regularMarketDayHigh", "high")
+        low_price = _g("dayLow", "regularMarketDayLow", "low")
+        volume = _g("volume", "regularMarketVolume")
+        year_high = _g("fiftyTwoWeekHigh", "52WeekHigh", "yearHigh")
+        year_low = _g("fiftyTwoWeekLow", "52WeekLow", "yearLow")
+        marketCap = _g("marketCap")
+        pe_ratio = _g("trailingPE", "forwardPE")
+        currency = _g("currency", "financialCurrency") or "USD"
 
+        # backfill open/high/low/volume from latest daily row if missing
         try:
-            change = info.get("regularMarketChange") or info.get("change")
+            need = any(x is None for x in (open_price, high_price, low_price, volume))
+            if need:
+                df_daily = t.history(period="7d", interval="1d", actions=False)
+                if df_daily is not None and not df_daily.empty:
+                    last = df_daily.iloc[-1]
+                    open_price = open_price or (last.get("Open") if "Open" in last.index else last.get("open"))
+                    high_price = high_price or (last.get("High") if "High" in last.index else last.get("high"))
+                    low_price = low_price or (last.get("Low") if "Low" in last.index else last.get("low"))
+                    volume = volume or (last.get("Volume") if "Volume" in last.index else last.get("volume"))
         except Exception:
             pass
-        try:
-            change_percent = info.get("regularMarketChangePercent")
-        except Exception:
-            pass
-        try:
-            previous_close = info.get("previousClose") or info.get("regularMarketPreviousClose")
-        except Exception:
-            pass
-        try:
-            marketCap = info.get("marketCap")
-        except Exception:
-            pass
-        try:
-            pe_ratio = info.get("trailingPE") or info.get("forwardPE")
-        except Exception:
-            pass
-        try:
-            currency = info.get("currency") or info.get("financialCurrency")
-        except Exception:
-            pass
+
+        def _to_float(v):
+            try:
+                if v is None or pd.isna(v):
+                    return None
+                return float(v)
+            except Exception:
+                try:
+                    return float(str(v).replace(",", ""))
+                except Exception:
+                    return None
+
+        realtime = {
+            "symbol": ticker,
+            "price": _to_float(price),
+            "open": _to_float(open_price),
+            "high": _to_float(high_price),
+            "low": _to_float(low_price),
+            "volume": int(volume) if (volume is not None and not pd.isna(volume)) else None,
+            "previousClose": _to_float(_g("previousClose", "regularMarketPreviousClose")),
+            "change": _to_float(_g("regularMarketChange", "change")),
+            "changesPercentage": _to_float(_g("regularMarketChangePercent")),
+            "yearHigh": _to_float(year_high),
+            "yearLow": _to_float(year_low),
+            "marketCap": _to_float(marketCap),
+            "pe": _to_float(pe_ratio),
+            "currency": currency,
+            "timestamp": ts,
+            "_yf_used": used or "none"
+        }
 
         name = None
         try:
             for k in ("shortName", "longName", "name"):
-                cand = info.get(k)
-                if cand:
-                    name = cand
+                if k in info and info.get(k):
+                    name = info.get(k)
                     break
         except Exception:
             pass
-
-        realtime = {
-            "symbol": ticker,
-            "price": price,
-            "open": open_price,
-            "high": high_price,
-            "low": low_price,
-            "volume": volume,
-            "previousClose": previous_close,
-            "change": change,
-            "changesPercentage": change_percent,
-            "yearHigh": year_high,
-            "yearLow": year_low,
-            "marketCap": marketCap,
-            "pe": pe_ratio,
-            "currency": currency or "USD",
-            "timestamp": ts,
-            "_yf_used": used or "none"
-        }
 
         if name:
             realtime["name"] = name
             realtime["companyName"] = name
 
+        # remove None values
         return {k: v for k, v in realtime.items() if v is not None}
 
     def _to_str_num(self, v, pick_key=None):
@@ -1390,7 +424,7 @@ class GetStockData(BaseTool):
 
     def _extract_ticker_subframe(self, df, requested_ticker):
         """Extract data for specific ticker from MultiIndex DataFrame (handles NSE/BSE fallback)."""
-        try:  
+        try:
             if not isinstance(df, pd.DataFrame):
                 return df
             if isinstance(df.columns, pd.MultiIndex):
@@ -1627,171 +661,89 @@ class GetStockData(BaseTool):
             exchange_symbol = getattr(ticker_info, "exchange_symbol", None)
             result = {"realtime": None, "historical": None}
 
-            # === REALTIME DATA ===
-            realtime_response = None
+            # --- REALTIME: always use yfinance ---
             try:
-                if exchange_symbol and ticker:
+                candidates = self._candidate_yf_tickers(ticker, exchange_symbol)
+                realtime_response = None
+                for c in candidates:
                     try:
-                        url = f"https://financialmodelingprep.com/stable/quote/?symbol={ticker}&apikey={fm_api_key}"
-                        currency_url = f'https://financialmodelingprep.com/stable/search-symbol?query={ticker}&apikey={fm_api_key}'
-                        data_resp = requests.get(url, timeout=10)
-                        search_resp = requests.get(currency_url, timeout=8)
-
-                        if data_resp.ok:
-                            fmp_json = data_resp.json()
-                            if isinstance(fmp_json, list) and len(fmp_json) > 0 and isinstance(fmp_json[0], dict):
-                                realtime_response = dict(fmp_json[0])
-                                if search_resp.ok:
-                                    currency_json = search_resp.json()
-                                    if isinstance(currency_json, list) and len(currency_json) > 0:
-                                        realtime_response["currency"] = currency_json[0].get("currency", "USD")
-                                realtime_response.setdefault("currency", "USD")
-                            else:
-                                raise Exception("FMP returned invalid data")
-                        else:
-                            raise Exception(f"FMP HTTP {data_resp.status_code}")
-                    except Exception as e_fmp:
-                        print(f"[DEBUG] FMP realtime failed for {ticker}: {e_fmp}, falling back to yfinance")
-                        cand = self._candidate_yf_tickers(ticker, exchange_symbol)
-                        for c in cand:
-                            try:
-                                rt = self._yf_realtime(c)
-                                if rt and rt.get("price") is not None:
-                                    realtime_response = rt
-                                    print(f"[DEBUG] yfinance realtime success for {c}")
-                                    break
-                            except Exception as e_yf:
-                                print(f"[DEBUG] yfinance realtime failed for {c}: {e_yf}")
-                                continue
-                        if realtime_response is None:
-                            realtime_response = {"error": "Failed to fetch realtime from FMP and yfinance."}
-                else:
-                    realtime_response = {"error": "Use web search tool for data not available from FMP."}
+                        rt = self._yf_realtime(c)
+                        if rt and rt.get("price") is not None:
+                            realtime_response = rt
+                            break
+                    except Exception:
+                        continue
+                if realtime_response is None:
+                    realtime_response = {"error": "yfinance realtime failed for all candidates"}
             except Exception as e:
-                realtime_response = {"error": f"Failed to get realtime data: {str(e)}"}
+                realtime_response = {"error": f"Realtime fetch failed: {e}"}
 
+            # ensure some fields
             if isinstance(realtime_response, dict):
-                if "symbol" not in realtime_response:
-                    realtime_response["symbol"] = ticker
-                if "timestamp" not in realtime_response or not realtime_response.get("timestamp"):
-                    realtime_response["timestamp"] = datetime.now(timezone.utc).isoformat()
+                realtime_response.setdefault("symbol", ticker)
+                realtime_response.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
                 if "companyName" not in realtime_response and "name" in realtime_response:
                     realtime_response["companyName"] = realtime_response.get("name")
 
             result["realtime"] = {k: v for k, v in (realtime_response or {}).items() if v is not None}
 
-            # === HISTORICAL DATA ===
+            # --- HISTORICAL: always use yfinance ---
             try:
-                periods = ["1M", "3M", "6M", "YTD", "1Y", "5Y", "MAX"]
-                historical_data = None
-                successful_period_index = None
+                yf_success = False
+                all_candidates = self._candidate_yf_tickers(ticker, exchange_symbol)
+                chosen_period = None
+                yf_list = None
+                for cand in all_candidates:
+                    p, lst, tried = self._try_yf_multi_periods(cand, desired_period=period if strictly else "1M")
+                    if lst:
+                        chosen_period = p
+                        yf_list = lst
+                        break
 
-                if exchange_symbol and ticker:
-                    try:
-                        if not strictly:
-                            for i, p in enumerate(periods):
-                                try:
-                                    hist = mongodb.get_or_update_historical(ticker, p)
-                                    normalized = self._normalize_historical_payload(hist)
-                                    if normalized:
-                                        historical_data = normalized
-                                        successful_period_index = i
-                                        print(f"[DEBUG] Got historical from MongoDB/FMP for {ticker} period {p}")
-                                        break
-                                except Exception as e_db:
-                                    txt = str(e_db).lower()
-                                    if "402" in txt or "payment required" in txt:
-                                        print(f"[WARN] FMP payment required for {ticker}")
-                                        historical_data = None
-                                        break
-                                    else:
-                                        continue
-                        else:
-                            try:
-                                hist = mongodb.get_or_update_historical(ticker, period)
-                                historical_data = self._normalize_historical_payload(hist)
-                            except Exception as e_db:
-                                txt = str(e_db).lower()
-                                if "402" in txt or "payment required" in txt:
-                                    historical_data = None
-                    except Exception as e_db_outer:
-                        print(f"[ERROR] MongoDB outer exception for {ticker}: {e_db_outer}")
-                        historical_data = None
+                if yf_list:
+                    # normalize formatting to match frontend expectations
+                    for rec in yf_list:
+                        rec.setdefault("ticker", ticker)
+                        try:
+                            dt = pd.to_datetime(rec.get("date"), errors="coerce")
+                            if not pd.isna(dt):
+                                rec["date"] = dt.strftime("%b %d, %Y")
+                        except Exception:
+                            pass
+                        if ("open" not in rec or rec.get("open") is None) and rec.get("open_num") is not None:
+                            rec["open"] = ("{:.8f}".format(rec["open_num"])).rstrip("0").rstrip(".")
+                        if ("high" not in rec or rec.get("high") is None) and rec.get("high_num") is not None:
+                            rec["high"] = ("{:.8f}".format(rec["high_num"])).rstrip("0").rstrip(".")
+                        if ("low" not in rec or rec.get("low") is None) and rec.get("low_num") is not None:
+                            rec["low"] = ("{:.8f}".format(rec["low_num"])).rstrip("0").rstrip(".")
+                        if ("close" not in rec or rec.get("close") is None) and rec.get("close_num") is not None:
+                            rec["close"] = ("{:.8f}".format(rec["close_num"])).rstrip("0").rstrip(".")
+                        rec.setdefault("volume", rec.get("volume", None))
 
-                if historical_data:
-                    try:
-                        formatted_data = convert_fmp_to_json(historical_data, ticker)
-                    except Exception as e_conv:
-                        print(f"[WARN] convert_fmp_to_json failed: {e_conv}")
-                        formatted_data = self._ensure_newest_first(historical_data)
-                    formatted_data = self._ensure_newest_first(formatted_data)
                     result["historical"] = {
-                        "source": "https://financialmodelingprep.com/",
-                        "period": period if strictly else periods[successful_period_index:],
-                        "data": formatted_data
+                        "source": "yfinance",
+                        "period": chosen_period or (period if strictly else "1M"),
+                        "data": yf_list
                     }
-                else:
-                    # FMP failed, try yfinance
-                    print(f"[DEBUG] FMP failed or empty, trying yfinance for {ticker}")
-                    yf_success = False
-                    candidates = self._candidate_yf_tickers(ticker, exchange_symbol)
-                    all_tried = []
-                    for cand in candidates:
-                        chosen_period, yf_list, tried = self._try_yf_multi_periods(cand, desired_period=period if strictly else "1M")
-                        all_tried.extend(tried if tried else [])
-                        if yf_list:
-                            for rec in yf_list:
-                                rec.setdefault("ticker", ticker)
-                                try:
-                                    dt = pd.to_datetime(rec.get("date"), errors="coerce")
-                                    if not pd.isna(dt):
-                                        rec["date"] = dt.strftime("%b %d, %Y")
-                                except Exception:
-                                    pass
-                                if ("open" not in rec or rec.get("open") is None) and rec.get("open_num") is not None:
-                                    rec["open"] = ("{:.8f}".format(rec["open_num"])).rstrip("0").rstrip(".")
-                                if ("high" not in rec or rec.get("high") is None) and rec.get("high_num") is not None:
-                                    rec["high"] = ("{:.8f}".format(rec["high_num"])).rstrip("0").rstrip(".")
-                                if ("low" not in rec or rec.get("low") is None) and rec.get("low_num") is not None:
-                                    rec["low"] = ("{:.8f}".format(rec["low_num"])).rstrip("0").rstrip(".")
-                                if ("close" not in rec or rec.get("close") is None) and rec.get("close_num") is not None:
-                                    rec["close"] = ("{:.8f}".format(rec["close_num"])).rstrip("0").rstrip(".")
-                                rec.setdefault("volume", rec.get("volume", None))
+                    yf_success = True
 
-                            result["historical"] = {
-                                "source": "yfinance",
-                                "period": chosen_period or (period if strictly else "1M"),
-                                "data": yf_list
-                            }
-                            yf_success = True
-                            print(f"[DEBUG] yfinance historical success for candidate {cand} (period {chosen_period})")
-                            break
-
-                    if not yf_success:
-                        print(f"[DEBUG] All yfinance candidates failed for {ticker}. Tried: {all_tried}")
-                        result["historical"] = {
-                            "error": "No data available after filtering",
-                            "data": [],
-                            "source": f"FMP+yfinance failed, tried candidates: {all_tried}"
-                        }
+                if not yf_success:
+                    result["historical"] = {
+                        "error": "No historical data available from yfinance",
+                        "data": [],
+                        "source": "yfinance"
+                    }
 
             except Exception as e:
-                print(f"[ERROR] Historical section failed for {ticker}: {e}")
-                result["historical"] = {
-                    "error": f"Stock history scrapping error: {e}",
-                    "data": [],
-                    "source": None
-                }
+                result["historical"] = {"error": f"Historical yfinance fetch failed: {e}", "data": [], "source": "yfinance"}
 
-            # --- FALLBACK REALTIME (CRITICAL) ---
-            # If realtime earlier failed, synthesize a minimal realtime snapshot from the latest historical row
+            # --- FALLBACK REALTIME FROM HIST if realtime missing ---
             try:
                 hist_obj = result.get("historical") or {}
                 hist_data = hist_obj.get("data") if isinstance(hist_obj, dict) else (hist_obj if isinstance(hist_obj, list) else [])
                 latest_rec = None
                 if isinstance(hist_data, list) and len(hist_data) > 0:
-                    # pick last record as latest (we formatted dates as readable strings)
-                    latest_rec = hist_data[-1]
+                    latest_rec = hist_data[-1]  # last record
                 rt = result.get("realtime") or {}
                 rt_error = isinstance(rt, dict) and ("error" in rt)
                 if (not rt or rt_error or rt.get("price") is None) and latest_rec:
@@ -1813,19 +765,11 @@ class GetStockData(BaseTool):
                         }
                         if "companyName" in rt:
                             fallback_rt["companyName"] = rt["companyName"]
-                        if "name" in rt:
-                            fallback_rt.setdefault("companyName", rt["name"])
                         result["realtime"] = {k: v for k, v in fallback_rt.items() if v is not None}
-                        print(f"[DEBUG] Populated fallback realtime for {ticker} from historical last record: {result['realtime']}")
-                else:
-                    if isinstance(rt, dict):
-                        rt.setdefault("symbol", ticker)
-                        rt.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
-                        result["realtime"] = {k: v for k, v in rt.items() if v is not None}
-            except Exception as e:
-                print(f"[DEBUG] Fallback realtime population failed for {ticker}: {e}")
+            except Exception:
+                pass
 
-            # === IS_ACTIVE CHECK ===
+            # is_active check (same logic as before)
             try:
                 data_list = []
                 if isinstance(result.get("historical"), dict):
@@ -1850,21 +794,155 @@ class GetStockData(BaseTool):
             except Exception:
                 if isinstance(result.get("historical"), dict):
                     result["historical"]["is_active"] = False
-                else:
-                    result["historical"] = {"error": "is_active check failed", "data": result.get("historical", {})}
 
-            # === MESSAGE FIELD ===
+            # === NORMALIZE & ADD FRONTEND-FRIENDLY KEYS ===
             try:
-                if (not isinstance(result.get('historical', {}), dict) or 'error' not in result['historical']) and (not isinstance(result.get('realtime', {}), dict) or 'error' not in result['realtime']):
-                    result['message'] = "A graph has been generated and shown to the user so do not include this data in the response."
-                else:
+                # Helper enforcers
+                def _to_number(v):
+                    try:
+                        if v is None:
+                            return None
+                        if isinstance(v, str):
+                            v = v.replace(",", "").strip()
+                        if isinstance(v, (int, float, np.integer, np.floating)):
+                            return float(v)
+                        return float(v)
+                    except Exception:
+                        return None
+
+                def _to_int(v):
+                    try:
+                        n = _to_number(v)
+                        return int(n) if n is not None else None
+                    except Exception:
+                        return None
+
+                # Ensure realtime exists and is dict
+                rt = result.get("realtime") or {}
+                if isinstance(rt, dict):
+                    # gather variants from possible keys
+                    rt_price = rt.get("price") or rt.get("close") or rt.get("last")
+                    rt_open = rt.get("open") or rt.get("open_num")
+                    rt_high = rt.get("high") or rt.get("high_num") or rt.get("dayHigh")
+                    rt_low = rt.get("low") or rt.get("low_num") or rt.get("dayLow")
+                    rt_prev = rt.get("previousClose") or rt.get("prevClose") or rt.get("previous_close")
+                    rt_vol = rt.get("volume") or rt.get("vol")
+                    rt_pe = rt.get("pe") or rt.get("peRatio") or rt.get("trailingPE") or rt.get("forwardPE")
+                    rt_mcap = rt.get("marketCap") or rt.get("market_cap") or rt.get("marketCapitalization")
+                    rt_yearHigh = rt.get("yearHigh") or rt.get("fiftyTwoWeekHigh") or rt.get("52WeekHigh")
+                    rt_yearLow = rt.get("yearLow") or rt.get("fiftyTwoWeekLow") or rt.get("52WeekLow")
+
+                    # canonical numeric fields
+                    rt["price"] = _to_number(rt_price)
+                    rt["open"] = _to_number(rt_open)
+                    rt["high"] = _to_number(rt_high)
+                    rt["low"] = _to_number(rt_low)
+                    rt["previousClose"] = _to_number(rt_prev)
+                    rt["volume"] = _to_int(rt_vol)
+                    rt["marketCap"] = _to_number(rt_mcap)
+                    rt["yearHigh"] = _to_number(rt_yearHigh)
+                    rt["yearLow"] = _to_number(rt_yearLow)
+                    rt["pe"] = _to_number(rt_pe)
+
+                    # add common aliases the frontend may look for
+                    rt.setdefault("peRatio", rt.get("pe"))
+                    rt.setdefault("pe_ratio", rt.get("pe"))
+                    rt.setdefault("PE", rt.get("pe"))
+                    # keep name/companyName if present
+                    if "companyName" in rt and "name" not in rt:
+                        rt["name"] = rt["companyName"]
+                    if "name" in rt and "companyName" not in rt:
+                        rt["companyName"] = rt["name"]
+
+                    # make sure symbol/timestamp exist
+                    rt.setdefault("symbol", ticker)
+                    rt.setdefault("timestamp", rt.get("timestamp") or datetime.now(timezone.utc).isoformat())
+
+                    # write back normalized realtime
+                    result["realtime"] = {k: v for k, v in rt.items() if v is not None}
+
+                # Build a small 'latest' summary object (frontends often read this)
+                latest_summary = {
+                    "symbol": result.get("realtime", {}).get("symbol") or ticker,
+                    "open": result.get("realtime", {}).get("open"),
+                    "high": result.get("realtime", {}).get("high"),
+                    "low": result.get("realtime", {}).get("low"),
+                    "close": result.get("realtime", {}).get("price"),
+                    "previousClose": result.get("realtime", {}).get("previousClose"),
+                    "volume": result.get("realtime", {}).get("volume"),
+                    "peRatio": result.get("realtime", {}).get("pe") or result.get("realtime", {}).get("peRatio"),
+                    "marketCap": result.get("realtime", {}).get("marketCap"),
+                    "timestamp": result.get("realtime", {}).get("timestamp") or datetime.now(timezone.utc).isoformat()
+                }
+
+                # attach summary in common places the frontend may inspect
+                result["summary"] = latest_summary
+                if isinstance(result.get("historical"), dict):
+                    # Ensure historical data is normalized and each record has numeric *_num fields expected by frontend.
+                    hist_data = result["historical"].get("data", []) or []
+                    for rec in hist_data:
+                        try:
+                            # coerce string numeric fields into separate numeric fields if not present
+                            if ("open_num" not in rec or rec.get("open_num") is None) and rec.get("open") is not None:
+                                try:
+                                    rec["open_num"] = _to_number(rec.get("open"))
+                                except Exception:
+                                    pass
+                            if ("high_num" not in rec or rec.get("high_num") is None) and rec.get("high") is not None:
+                                try:
+                                    rec["high_num"] = _to_number(rec.get("high"))
+                                except Exception:
+                                    pass
+                            if ("low_num" not in rec or rec.get("low_num") is None) and rec.get("low") is not None:
+                                try:
+                                    rec["low_num"] = _to_number(rec.get("low"))
+                                except Exception:
+                                    pass
+                            if ("close_num" not in rec or rec.get("close_num") is None) and rec.get("close") is not None:
+                                try:
+                                    rec["close_num"] = _to_number(rec.get("close"))
+                                except Exception:
+                                    pass
+                            if "volume" in rec and not isinstance(rec.get("volume"), (int, float)):
+                                try:
+                                    rec["volume"] = _to_int(rec.get("volume"))
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+
+                    # attach the latest summary under historical.latest for UIs that read there
+                    if hist_data:
+                        # choose last element as latest (keeps your present semantics)
+                        result["historical"].setdefault("latest", {
+                            "date": hist_data[-1].get("date"),
+                            "open": hist_data[-1].get("open_num") or _to_number(hist_data[-1].get("open")),
+                            "high": hist_data[-1].get("high_num") or _to_number(hist_data[-1].get("high")),
+                            "low": hist_data[-1].get("low_num") or _to_number(hist_data[-1].get("low")),
+                            "close": hist_data[-1].get("close_num") or _to_number(hist_data[-1].get("close")),
+                            "volume": hist_data[-1].get("volume")
+                        })
+                    result["historical"]["data"] = hist_data
+
+                # ensure message remains set
+                try:
+                    if (not isinstance(result.get('historical', {}), dict) or 'error' not in result['historical']) and (not isinstance(result.get('realtime', {}), dict) or 'error' not in result['realtime']):
+                        result['message'] = "A graph has been generated and shown to the user so do not include this data in the response."
+                    else:
+                        result['message'] = "Generate a graph based on this data which is visible to the user."
+                except Exception:
                     result['message'] = "Generate a graph based on this data which is visible to the user."
-            except Exception:
-                result['message'] = "Generate a graph based on this data which is visible to the user."
+            except Exception as e:
+                print(f"[DEBUG] Normalization block failed for {ticker}: {e}")
+                # preserve previous message setting
+                try:
+                    result['message'] = result.get('message', "Generate a graph based on this data which is visible to the user.")
+                except Exception:
+                    result['message'] = "Generate a graph based on this data which is visible to the user."
 
             return result
 
-        # === MAIN EXECUTION WITH THREADPOOL ===
+        # main threadpool executor (same logic)
         all_results = []
         if not ticker_data:
             return all_results
@@ -1932,117 +1010,102 @@ class CombinedFinancialStatementTool(BaseTool):
         else:
             # return self._fetch_yahoo_data(symbol, statement_type, period, timestamp)
             return "Use web search tool for non USA data"
+        
+    def _fetch_yahoo_financials(self, symbol: str, statement_type: str, period: str = "annual", limit: int = 5):
+        """
+        Use yfinance to fetch financial statements. Returns a dict:
+        {"source": "yfinance", "currency": <currency>, "data": <list_of_records>}
+        """
+        try:
+            t = yf.Ticker(symbol)
+            # select the requested statement
+            if statement_type == "income_statement":
+                # YF provides .financials (annual) and .quarterly_financials
+                df = t.financials if period == "annual" else t.quarterly_financials
+            elif statement_type == "balance_sheet":
+                df = t.balance_sheet if period == "annual" else t.quarterly_balance_sheet
+            elif statement_type == "cash_flow":
+                df = t.cashflow if period == "annual" else t.quarterly_cashflow
+            else:
+                return {"error": f"Unknown statement_type: {statement_type}"}
 
-    # def _fetch_screener_data(self, symbol: str, statement_type: str, reporting_format: str, timestamp: str) -> str:
-    #     """Fetches financial statements from Screener for NSE/BSE stocks."""
-    #     try:
-    #         symbol = symbol.split('.')[0]
-    #         fetch_methods = {
-    #             "balance_sheet": fetch_screener_balance_sheet,
-    #             "cash_flow": fetch_screener_cashflow_results,
-    #             "income_statement": fetch_screener_income_and_summary_results
-    #         }
-    #         fetch_function = fetch_methods[statement_type]
+            if df is None or df.empty:
+                return {"error": "No data from yfinance", "source": "yfinance", "data": []}
 
-    #         if statement_type == "income_statement":
-    #             results = fetch_function(symbol, reporting_format)
-    #             currency, profit_loss_df, summary_df, url = results["currency"], results[
-    #                 "profit_loss"], results["summary"], results["source"]
+            # Transpose/normalize: yfinance returns columns as dates; convert to list of dicts
+            try:
+                df_t = df.fillna(0).T  # rows are periods
+                df_t.index = [pd.to_datetime(i).strftime("%Y-%m-%d") if not isinstance(i, str) else i for i in df_t.index]
+                records = []
+                for idx, row in df_t.iterrows():
+                    rec = {"period_end": idx}
+                    for col in df_t.columns:
+                        val = row[col]
+                        try:
+                            if pd.isna(val):
+                                rec[col] = None
+                            else:
+                                rec[col] = float(val)
+                        except Exception:
+                            rec[col] = val
+                    records.append(rec)
+            except Exception:
+                # fallback: convert columns to string values
+                records = df.reset_index().to_dict(orient="records")
 
-    #             data = {
-    #                 "currency": currency,
-    #                 "data": {
-    #                     "profit_loss": profit_loss_df.to_dict(orient="records"),
-    #                     "summary": summary_df.to_dict(orient="records") if not summary_df.empty else "No summary data available."
-    #                 }
-    #             }
-    #             filename = f"{symbol}_{reporting_format}_incomeStatement_and_summary_{timestamp}.json"
-    #             # formatted_output = f"- Ticker: {symbol}\n- Currency: {currency}\n- Profit & Loss:\n{profit_loss_df.to_markdown()}\n\n- Source: {url}"
-    #             formatted_output = f"- Ticker: {symbol}\n- Currency: {currency}\n- Profit & Loss:\n{profit_loss_df.to_markdown()}"
-    #             return self._pretty_return(data, filename, formatted_output, url)
+            # currency: yfinance doesn't always expose currency for statements; try info
+            try:
+                currency = (t.info.get("financialCurrency") or t.info.get("currency") or "USD")
+            except Exception:
+                currency = "USD"
 
-    #         df, currency, url = fetch_function(symbol, reporting_format)
-    #         data = {"currency": currency, "data": df.to_dict(orient="records")}
-    #         filename = f"{symbol}_{reporting_format}_{statement_type}_{timestamp}.json"
-    #         # formatted_output = f"- Ticker: {symbol}\n- Currency: {currency}\n- {statement_type}:\n{df.to_markdown()}\n\n- Source: {url}"
-    #         formatted_output = f"- Ticker: {symbol}\n- Currency: {currency}\n- {statement_type}:\n{df.to_markdown()}"
-    #         return self._pretty_return(data, filename, formatted_output, url)
+            return {"source": "yfinance", "currency": currency, "data": records[:limit] if limit else records}
+        except Exception as e:
+            return {"error": f"yfinance fetch failed: {e}", "source": "yfinance", "data": []}
 
-    #     except Exception as e:
-    #         return pretty_format(f"Error retrieving {statement_type} from Screener: {str(e)}")
 
     def _fetch_us_data(self, symbol: str, statement_type: str, period: str, limit: int, timestamp: str):
-        """Fetches financial statements from FMP or Yahoo Finance for NYSE/NASDAQ stocks."""
+        """Fetches financial statements from MongoDB/FMP, fallback to yfinance if not available."""
         try:
-            # FMP API Call
-            fmp_endpoints = {
-                "balance_sheet": "balance-sheet-statement",
-                "cash_flow": "cash-flow-statement",
-                "income_statement": "income-statement"
-            }
-            # url = f"https://financialmodelingprep.com/api/v3/{fmp_endpoints[statement_type]}/{symbol}?limit={limit}&apikey={fm_api_key}"
-            # response = requests.get(url)
-            # data = response.json()
             data = mongodb.fetch_financial_data(symbol, statement_type, limit=limit)
-
+            # If mongodb/FMP returned usable list data, return it
             if isinstance(data, list) and data:
-                if period == 'quarterly':
-                    data.append({"Note": "I don't have access to quarterly financial statement data."})
                 return data
-            else:
-                # Fallback to Yahoo Finance
-                # return self._fetch_yahoo_data(symbol, statement_type, period, timestamp)
-                return data
+            # Otherwise fallback to yahoo
+            yf_res = self._fetch_yahoo_financials(symbol, statement_type, period, limit)
+            if isinstance(yf_res, dict) and yf_res.get("data"):
+                # normalize to same style as existing code expects: return the list or small wrapper
+                return {"symbol": symbol, "source": "yfinance", "currency": yf_res.get("currency"), "data": yf_res.get("data")}
+            return {"symbol": symbol, "error": "No financials found from FMP/mongo or yfinance", "source": "none", "data": []}
         except Exception as e:
-            error_msg = f"Error retrieving {statement_type} from Financial Modeling Prep: {str(e)}"
-            return pretty_format(error_msg)
+            return {"error": f"Error retrieving {statement_type}: {str(e)}"}
 
-    # def _fetch_yahoo_data(self, symbol: str, statement_type: str, period: str, timestamp: str):
-    #     """Fetches financial statements from Yahoo Finance as a backup."""
+
+    # def _fetch_us_data(self, symbol: str, statement_type: str, period: str, limit: int, timestamp: str):
+    #     """Fetches financial statements from FMP or Yahoo Finance for NYSE/NASDAQ stocks."""
     #     try:
-    #         yahoo_methods = {
-    #             "balance_sheet": fetch_yahoo_finance_balance_sheet,
-    #             "cash_flow": fetch_yahoo_finance_cash_flow_sheet,
-    #             "income_statement": fetch_yahoo_finance_income_statement
+    #         # FMP API Call
+    #         fmp_endpoints = {
+    #             "balance_sheet": "balance-sheet-statement",
+    #             "cash_flow": "cash-flow-statement",
+    #             "income_statement": "income-statement"
     #         }
-    #         fetch_function = yahoo_methods[statement_type]
-    #         df, currency, url = fetch_function(symbol, period)
+    #         # url = f"https://financialmodelingprep.com/api/v3/{fmp_endpoints[statement_type]}/{symbol}?limit={limit}&apikey={fm_api_key}"
+    #         # response = requests.get(url)
+    #         # data = response.json()
+    #         data = mongodb.fetch_financial_data(symbol, statement_type, limit=limit)
 
-    #         data = {"currency": currency, "data": df.to_dict(orient="records")}
-    #         filename = f"{symbol}_{statement_type}_{period}_{timestamp}.json"
-    #         formatted_output = f"- Ticker: {symbol}\n- Currency: {currency}\n- {statement_type}:\n{df.to_markdown()}"
-    #         return self._pretty_return(data, filename, formatted_output, url)
-
+    #         if isinstance(data, list) and data:
+    #             if period == 'quarterly':
+    #                 data.append({"Note": "I don't have access to quarterly financial statement data."})
+    #             return data
+    #         else:
+    #             # Fallback to Yahoo Finance
+    #             # return self._fetch_yahoo_data(symbol, statement_type, period, timestamp)
+    #             return data
     #     except Exception as e:
-    #         return pretty_format(f"Error retrieving {statement_type} from Yahoo Finance: {str(e)}")
-
-    # def _pretty_return(self, data_dict: Dict, filename: str, formatted_output: str, url: str) -> str:
-    #     """Handles JSON saving and returns a formatted response."""
-    #     # asyncrunner.run_coroutine(mongodb.insert_in_db([{"filename": filename, "data": data_dict}]))
-    #     return {"data": formatted_output, "source": url}
-
-
-# class CurrencyRateTool(BaseTool):
-#     name: str = "get_currency_exchange_rate"
-#     description: str = """Use this tool to get the latest current currency exchange rates with USD as base."""
-
-#     args_schema: Type[BaseModel] = CurrencyExchangeRateSchema
-
-#     def _run(self, currencies: List[str] = ['INR', 'AED', 'EUR'], explanation: str = None):
-#         try:
-#             symbols_string = ",".join(currencies)
-#             conn = http.client.HTTPSConnection("api.currencyfreaks.com")
-#             payload = ''
-#             headers = {}
-#             url = f"/v2.0/rates/latest?apikey={currency_api_key}&symbols={symbols_string}"
-#             conn.request("GET", url, payload, headers)
-#             res = conn.getresponse()
-#             data = res.read()
-#             data = data.decode("utf-8")
-#             return f"Current exchange rate: {data}"
-#         except Exception as e:
-#             error_msg = f"Can't get latest currency exchange rates due to error: {str(e)}"
-#             return error_msg
+    #         error_msg = f"Error retrieving {statement_type} from Financial Modeling Prep: {str(e)}"
+    #         return pretty_format(error_msg)
 
 
 class StockPriceChangeTool(BaseTool):
@@ -2301,88 +1364,3 @@ tool_list = [
 if __name__ == "__main__":
     # Testing get_essential_company_finance tool
     get_company_essential_financials._run(symbols=["AMZN"])
-
-
-## Old Code for Crypto:
-
-# # Schema for input: Crypto Data
-# class CryptoTickerSchema(BaseModel):
-#     ticker: str  
-#     from_date: Optional[str] = None
-#     to_date: Optional[str] = None
-
-# class CryptoDataSchema(BaseModel):
-#     ticker_data: List[CryptoTickerSchema]
-#     explanation: Optional[str] = None
-
-# class GetCryptoDataTool(BaseTool):
-#     name: str = "get_crypto_data_tool"
-#     description: str = """Use this tool to get historical crypto data such as open, high, low, close, volume, and percent change.
-# Provide cryptocurrency symbol (e.g., 'BTCUSD', 'ETHUSD') and optional date range (from_date, to_date)."""
-
-#     args_schema: Type[BaseModel] = CryptoDataSchema
-
-#     def _run(self, ticker_data: List[CryptoTickerSchema], explanation: Optional[str] = None):
-
-#         fm_api_key = os.getenv("FM_API_KEY")
-#         results = []
-
-#         print(f"--- TOOL CALL - CRYPTO DATA ---")
-#         print(f"ticker_data = {ticker_data}")
-
-#         def fetch(symbol, from_date, to_date):
-#             try:
-#                 # Fallback to 30-day default if not provided
-#                 if not to_date:
-#                     to_date = datetime.date.today().isoformat()
-#                 if not from_date:
-#                     from_date = (datetime.date.today() - datetime.timedelta(days=30)).isoformat()
-
-#                 data = get_crypto_data(symbol, fm_api_key, from_date, to_date)
-
-#                 print(f"data = {data}")
-
-#                 if not data:
-#                     return {
-#                         "symbol": symbol,
-#                         "realtime": {
-#                             "message": "Realtime data for cryptocurrencies is not currently supported."
-#                         },
-#                         "historical": {
-#                             "data": [],
-#                             "period": f"{from_date} to {to_date}",
-#                             "source": "https://financialmodelingprep.com/developer/docs/cryptocurrency-api"
-#                         },
-#                         "message": "No historical data found."
-#                     }
-
-#                 return {
-#                     "symbol": symbol,
-#                     "realtime": {
-#                         "message": "Realtime data for cryptocurrencies is not currently supported."
-#                     },
-#                     "historical": {
-#                         "data": data,
-#                         "period": f"{from_date} to {to_date}",
-#                         "source": "https://financialmodelingprep.com/developer/docs/cryptocurrency-api"
-#                     },
-#                     "message": "Generate a graph based on this data which is visible to the user."
-#                 }
-
-#             except Exception as e:
-#                 return {
-#                     "symbol": symbol,
-#                     "realtime": {"error": "Realtime data unavailable"},
-#                     "historical": {"data": [], "error": str(e)},
-#                     "message": f"Error retrieving data for {symbol}."
-#                 }
-
-#         with concurrent.futures.ThreadPoolExecutor(max_workers=len(ticker_data)) as executor:
-#             futures = {
-#                 executor.submit(fetch, item.ticker, item.from_date, item.to_date): item.ticker
-#                 for item in ticker_data
-#             }
-#             for future in concurrent.futures.as_completed(futures):
-#                 results.append(future.result())
-
-#         return results
