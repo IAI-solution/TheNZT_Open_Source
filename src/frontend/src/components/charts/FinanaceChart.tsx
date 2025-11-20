@@ -318,7 +318,7 @@ const FinanceChart: React.FC<FinanceChartProps> = ({
             ? chartData.realtime.changesPercentage > 0
             : false;
           const realtimeData = chartData.realtime;
-          const historicalData = chartData.historical?.data;
+          const historicalData = chartData.historical?.data || [];
           const chart_session_id = chartData.chart_session_id;
           const key = `${messageId}-${chartData.realtime.symbol}`;
           const isOpen = isChartInsightRoute
@@ -375,7 +375,9 @@ const FinanceChart: React.FC<FinanceChartProps> = ({
                       </div>
 
                       <StockSparkLines
-                        data={historicalData.map((day) => parseFloat(day.close.replace(',', '')))}
+                        data={historicalData
+                            .filter((day) => day?.close)
+                            .map((day) => parseFloat(day.close.replace(',', '')))}
                         fillColor={isPositive ? '#22c55e' : '#ef4444'}
                       />
                     </div>

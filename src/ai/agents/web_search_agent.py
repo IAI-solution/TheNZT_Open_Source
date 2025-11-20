@@ -9,6 +9,8 @@ from langgraph.prebuilt import create_react_agent
 from src.ai.llm.model import get_llm, get_llm_alt
 from src.ai.llm.config import WebSearchConfig
 from langgraph.types import Command
+from time import sleep
+
 
 wsc = WebSearchConfig()
 
@@ -20,6 +22,7 @@ class WebSearchAgent(BaseAgent):
         self.model_alt = get_llm_alt(wsc.ALT_MODEL, wsc.ALT_TEMPERATURE)
         self.tools = tool_list
         self.system_prompt = SYSTEM_PROMPT
+        self.invoke_delay = 30.0
 
     def format_input_prompt(self, state: Dict[str, Any]) -> str:
         task = state['current_task']
@@ -47,6 +50,8 @@ Address any identified issues and enhance the overall quality of the output.\n""
                 task['required_context'], state['task_list'])
 
         input = {"messages": context_messages + [human_message]}
+        
+        sleep(self.invoke_delay)
 
         try:
             agent = create_react_agent(model=self.model, tools=self.tools, prompt=system_message)
@@ -54,6 +59,7 @@ Address any identified issues and enhance the overall quality of the output.\n""
 
         except Exception as e:
             print(f"Falling back to alternate model: {str(e)}")
+            sleep(self.invoke_delay)
             try:
                 agent = create_react_agent(
                     model=self.model_alt, tools=self.tools, prompt=system_message)

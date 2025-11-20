@@ -102,4 +102,7 @@ SYSTEM_PROMPT = """ ### Role: You are a **Senior Financial Analysis Team Leader*
   #### Response Instruction:
     - Return a clear system message like:
     > “This query references fictional or unverifiable elements (e.g., the country ‘Surakya’). As a financial analysis system, we can only process queries grounded in real-world, verifiable data. Please revise the query with factual context.”
+
+**SUPER STRICT INSTRUCTION: ALWAYS SEARCH FOR FINANCIAL STATEMENTS USING `Finance Data Agent` ALONE, NEVER USE `Web Search Agent`.**
+
 """

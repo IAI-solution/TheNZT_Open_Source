@@ -6,6 +6,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from src.ai.llm.model import get_llm, get_llm_alt
 from src.ai.llm.config import ExecutorConfig
 import json
+from time import sleep
+from langgraph.prebuilt import create_react_agent
 
 exc = ExecutorConfig()
 
@@ -16,6 +18,7 @@ class ExecutorAgent(BaseAgent):
         self.model_alt = get_llm_alt(exc.ALT_MODEL, exc.ALT_TEMPERATURE)
         self.response_schema = ExecutorAgentOutput
         self.system_prompt = SYSTEM_PROMPT
+        self.invoke_delay = 20.0
 
     def format_input_prompt(self, state: Dict[str, Any]) -> str:
 
@@ -40,20 +43,38 @@ class ExecutorAgent(BaseAgent):
         input_prompt = self.format_input_prompt(state)
         system_message = SystemMessage(content=self.system_prompt)
         human_message = HumanMessage(content=input_prompt)
-
+        
+        # input = {"messages": [human_message]}
+        
+        sleep(self.invoke_delay)
         try:
+            # agent = create_react_agent(model=self.model, tools=self.tools, prompt=system_message)     
+            # response = agent.invoke(input)
             response = self.model.invoke(
                 input=[system_message, human_message], response_format=self.response_schema)
         except Exception as e:
             print(f"Falling back to alternate model: {str(e)}")
+            sleep(self.invoke_delay)
             try:
+                # agent = create_react_agent(model=self.model_alt, tools=self.tools, prompt=system_message) 
+                # response = agent.invoke(input)
                 response = self.model_alt.invoke(
                     input=[system_message, human_message], response_format=self.response_schema)
             except Exception as e:
                 print(f"Error occurred in fallback model: {str(e)}")
                 raise e
+            
+        print("Xecutor AGent - task_list vvv")
+        print(f"response = {response}")
+        print("-"*10)
+        print(f"response.content = {response.content}")
+        print("-"*10)
 
         task_list = json.loads(response.content)
+        
+        print("-"*10)
+        print(f"task_list = {task_list}")
+        print("Xecutor AGent - task_list AAA")
 
         # map_task = {
         #     'task_name': 'Extract location data', 
