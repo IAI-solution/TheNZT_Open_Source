@@ -8,6 +8,7 @@ from src.ai.llm.config import ReportGenerationConfig
 from src.ai.tools.graph_gen_tool import graph_tool_list
 from langgraph.prebuilt import create_react_agent
 from datetime import date
+from time import sleep
 
 
 rgc = ReportGenerationConfig()
@@ -20,6 +21,7 @@ class ReportGenerationAgent(BaseAgent):
         self.model_alt = get_llm_alt(rgc.ALT_MODEL, rgc.ALT_TEMPERATURE, rgc.ALT_MAX_TOKENS)
         self.tools = graph_tool_list
         self.system_prompt = SYSTEM_PROMPT
+        self.invoke_delay = 10.0
 
     def format_input_prompt(self, state: Dict[str, Any]) -> str:
         # print("--- From inside format_input_prompt of ReportGenerationAgent ---") #
@@ -65,15 +67,18 @@ class ReportGenerationAgent(BaseAgent):
         human_message = HumanMessage(content=input_prompt)
 
         input = {"messages": [human_message]}
+        
+        sleep(self.invoke_delay)
 
         try:
             # response = self.model.invoke(input=[system_message, human_message])
             agent = create_react_agent(model=self.model, tools=self.tools, prompt=system_message)            
             response = agent.invoke(input)
-            print(f"response of report generation agent = {response}.") #
+            print(f"response of report generation agent = {response}.") 
 
         except Exception as e:
             print(f"Falling back to alternate model: {str(e)}")
+            sleep(self.invoke_delay)
             try:
                 agent = create_react_agent(
                     model=self.model_alt, tools=self.tools, prompt=system_message)

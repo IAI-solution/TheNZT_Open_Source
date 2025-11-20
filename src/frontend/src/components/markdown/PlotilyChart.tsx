@@ -117,12 +117,15 @@ const PlotlyChart: React.FC<PlotlyChartProps> = ({
     // Calculate the best interval to achieve the desired number of ticks.
     const tickSpacing = Math.max(1, Math.floor(totalDataPoints / desiredTicks));
 
+    console.log(data[0].x_axis_data)
+
     if (data[0]?.x_axis_data) {
       data[0].x_axis_data.forEach((label: string, index: number) => {
         // Show a tick if it's on the interval OR if it's the very last one.
+        const stringLabel=`${label}`
         if (index % tickSpacing === 0 || index === totalDataPoints - 1) {
           tickvals.push(index);
-          const formattedLabel = label.replace(/\b\d{4}\b/, (year) => `${year.slice(-2)}`);
+          const formattedLabel = stringLabel.replace(/\b\d{4}\b/, (year) => `${year.slice(-2)}`);
           ticktext.push(formattedLabel);
         }
       });

@@ -10,6 +10,8 @@ from src.ai.llm.model import get_llm, get_llm_alt
 from src.ai.llm.config import FinanceDataConfig
 from langgraph.types import Command
 from datetime import date
+from time import sleep
+
 
 
 fdc = FinanceDataConfig()
@@ -22,6 +24,7 @@ class FinanceDataAgent(BaseAgent):
         self.model_alt = get_llm_alt(fdc.ALT_MODEL, fdc.ALT_TEMPERATURE, fdc.ALT_MAX_TOKENS)
         self.tools = tool_list
         self.system_prompt = SYSTEM_PROMPT
+        self.invoke_delay = 30.0
 
     def format_input_prompt(self, state: Dict[str, Any]) -> str:
         task = state['current_task']
@@ -51,6 +54,8 @@ Address any identified issues and enhance the overall quality of the output.\n""
                 task['required_context'], state['task_list'])
 
         input = {"messages": context_messages + [human_message]}
+        
+        sleep(self.invoke_delay)
 
         try:
             # agent = create_react_agent(
@@ -60,6 +65,7 @@ Address any identified issues and enhance the overall quality of the output.\n""
 
         except Exception as e:
             print(f"Falling back to alternate model: {str(e)}")
+            sleep(self.invoke_delay)
             try:
                 agent = create_react_agent(
                     model=self.model_alt, tools=self.tools, prompt=system_message)
