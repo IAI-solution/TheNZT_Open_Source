@@ -1,5 +1,29 @@
 services:
-  
+
+  mongodb:
+    image: mongo:8.0-noble
+    container_name: insight-agent-mongodb
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    command: ["mongod", "--auth", "--bind_ip_all"]
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mongosh -u \"$MONGO_INITDB_ROOT_USERNAME\" -p \"$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval 'db.adminCommand({ ping: 1 })' --quiet || exit 1"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - insight-network
+
   python-app:
     build:
       context: ..
@@ -7,60 +31,33 @@ services:
     container_name: insight-agent
     restart: always
     env_file:
-    - .env
+      - ../.env
     environment:
       - PYTHONUNBUFFERED=1
-      - MONGO_URI=${MONGO_URI}          # ensure MONGO_URI is present in .env
     platform: linux/amd64
     ports:
       - "8000:8000"
     volumes:
       - storage:/data
     healthcheck:
-      test: ["CMD-SHELL", "bash", "-c", 'exec 3<>/dev/tcp/localhost/8000; echo -e "GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n" >&3; cat <&3']
-      interval: 5s
-      timeout: 1s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
       retries: 3
+      start_period: 60s
     depends_on:
-      mongodb:
-        condition: service_healthy
+      - mongodb
+      - redis
+      - qdrant
     networks:
       - insight-network
 
-  mongodb:
-    image: mongo:8.0-noble
-    container_name: insight-agent-mongodb
-    restart: unless-stopped
-    env_file:
-      - ./.env
-    environment:
-      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE:-admin}
-    command: ["mongod","--auth","--bind_ip_all"]
-    ports:
-      - "127.0.0.1:27017:27017"   # leave bound to localhost for host-only access
-    volumes:
-      - mongodb_data:/data/db
-      - ./mongo-init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD-SHELL", "mongosh --eval 'db.adminCommand(\"ping\")' >/dev/null 2>&1 || exit 1"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    networks:
-      - insight-network
-
-   
   qdrant:
     image: qdrant/qdrant:v1.10.0
     container_name: insight-agent-qdrant
     restart: always
-    # Load secrets from the repository root .env (do NOT commit sensitive values)
     env_file:
-      - .env
-    # environment:
-      # Qdrant server API key; set QDRANT_API_KEY in .env (see .env.example)
-      # QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
-       # Soft resource limits for single-node deployments. Adjust as needed.
+      - ../.env
     deploy:
       resources:
         limits:
@@ -82,10 +79,11 @@ services:
     image: redis:7.0.0-alpine
     restart: always
     environment:
-      TZ: UTC # Sets the timezone
+      TZ: UTC
+    command:
+      ["redis-server", "--appendonly", "no", "--save", "60", "1", "--loglevel", "warning", "--requirepass", "admin"]
     volumes:
       - redis_data:/data
-    command: ["redis-server", "--appendonly", "no", "--save", "60", "1", "--loglevel", "warning", "--requirepass", "admin"]
     healthcheck:
       test: ["CMD-SHELL", "redis-cli", "-a", "admin", "ping"]
       interval: 5s
@@ -93,14 +91,13 @@ services:
       retries: 3
     networks:
       - insight-network
-    
 
 volumes:
-  mongodb_data: # Define the mongodb data volume
-  redis_data: # Define the redis data volume
-  qdrant_data: # Define the qdrant data volume
-  storage: # Define the storage volume
+  mongodb_data:
+  redis_data:
+  qdrant_data:
+  storage:
 
 networks:
   insight-network:
-      driver: bridge
+    driver: bridge

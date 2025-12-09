@@ -500,8 +500,6 @@ insight-bot/
 ├── .venv/                        # Python virtual environment
 ├── docker/
 │   ├── docker-compose.yml
-│   ├── mongo-init/
-│   │   └── create-user.sh
 │   └── Dockerfile
 ├── docs/
 │   ├── architectures/
