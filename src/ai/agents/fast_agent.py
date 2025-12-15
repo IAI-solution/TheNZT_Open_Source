@@ -112,7 +112,7 @@ async def process_fast_agent_input(user_id: str, session_id: str, user_query: st
 
         async for stream_mode, update in agent.astream(input={"messages": input_messages}, stream_mode=['updates', 'messages', 'custom'], config={'recursion_limit': 50}):
             # Add delay at the start of each iteration
-            await asyncio.sleep(0.1)  # Small delay between steps
+            # await asyncio.sleep(0.1)  # Small delay between steps
             if stream_mode == 'updates':
                 print("---\n", update, "\n---")
                 message_logs = f"AGENT UPDATE\n{str((stream_mode, update))}\n\n"
