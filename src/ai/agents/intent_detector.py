@@ -8,6 +8,8 @@ from langgraph.graph import END
 import json
 from src.ai.llm.model import get_llm, get_llm_alt
 from src.ai.llm.config import IntentDetectionConfig
+from time import sleep
+
 
 cfg = IntentDetectionConfig()
 
@@ -19,6 +21,7 @@ class IntentDetector(BaseAgent):
         self.model_alt = get_llm_alt(cfg.ALT_MODEL, cfg.ALT_TEMPERATURE)
         self.response_schema = IntentDetection
         self.system_prompt = SYSTEM_PROMPT
+        self.invoke_delay = 12.0
 
     def format_input_prompt(self, state: Dict[str, Any]) -> str:
         input_prompt = ""
@@ -50,7 +53,8 @@ class IntentDetector(BaseAgent):
     def __call__(self, state: Dict[str, Any]) -> Command[Literal["Manager Agent", "Planner Agent", "DB Search Agent", "__end__"]]:
         history = self.format_input_prompt(state)
         messages = [SystemMessage(content=self.system_prompt)] + history
-
+        
+        sleep(self.invoke_delay)
         try:
             output = self.model.invoke(input=messages, response_format=self.response_schema)
             # print("From Inside Intent Detector")
@@ -58,6 +62,7 @@ class IntentDetector(BaseAgent):
             # print(f"output of llm = \n{output}\n")
         except Exception as e:
             print(f"Falling back to alternate model: {str(e)}")
+            sleep(self.invoke_delay)
             try:
                 output = self.model_alt.invoke(input=messages, response_format=self.response_schema)
             except Exception as e:

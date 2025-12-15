@@ -104,7 +104,7 @@ class SingleChartData(BaseModel):
 
 
 class StructOutput(BaseModel):
-    chart_type: Literal['bar', 'group_bar', 'pie', 'lines'] = Field(description="Type of the chart to be generated")
+    chart_type: Literal['bar', 'group_bar', 'lines'] = Field(description="Type of the chart to be generated")
     chart_title: str = Field(description="Title of the chart")
     x_label: str = Field(description="Label for the x-axis")
     y_label: str = Field(description="Label for the y-axis")    

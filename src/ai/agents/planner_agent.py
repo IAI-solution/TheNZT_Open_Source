@@ -8,6 +8,8 @@ import json
 import re
 from src.ai.llm.model import get_llm, get_llm_alt
 from src.ai.llm.config import PlannerConfig
+import asyncio
+from time import sleep
 
 pac = PlannerConfig()
 
@@ -18,6 +20,7 @@ class PlannerAgent(BaseAgent):
         self.model_alt = get_llm_alt(pac.ALT_MODEL, pac.ALT_TEMPERATURE)
         self.response_schema = PlannerAgentOutput
         self.system_prompt = SYSTEM_PROMPT
+        self.invoke_delay = 10.0
 
     def format_input_prompt(self, state: Dict[str, Any]) -> str:
         user_query = state.get('formatted_user_query', state['user_query'])
@@ -70,11 +73,14 @@ class PlannerAgent(BaseAgent):
         input_prompt = self.format_input_prompt(state)
         system_message = SystemMessage(content=self.system_prompt)
         human_message = HumanMessage(content=input_prompt)
+        
+        sleep(self.invoke_delay)
 
         try:
             response = self.model.invoke(input=[system_message, human_message])
         except Exception as e:
             print(f"Falling back to alternate model: {str(e)}")
+            sleep(self.invoke_delay)
             try:
                 response = self.model_alt.invoke(input=[system_message, human_message])
             except Exception as e:

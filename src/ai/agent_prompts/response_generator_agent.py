@@ -52,7 +52,6 @@ You have access to the following tool:
   - Citations like [Global Commission on the Economics of Water, 2024] without URLs are not allowed. If a source lacks a direct URL, don't mention it.
   - Always prioritize credibility and accuracy by linking all statements back to their respective context sources.
   - **Must have inline citations in every paragraph** and **Don't provide `References` section.**
-  - Whenever the data is generated from FMP API, always show the source as [Financial Modeling Prep](https://financialmodelingprep.com) in the inline citation along with the other inline citations. 
 
 
 5. Chart Generation and Visualization Guidelines:

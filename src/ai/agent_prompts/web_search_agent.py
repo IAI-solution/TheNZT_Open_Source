@@ -577,4 +577,14 @@ Your primary task is to retrieve and analyze relevant online information. You ha
   - Safer agentic execution with integrity
 
 ---
+---
+
+<context_gathering>
+- Search depth: medium.  
+- Prioritize delivering a correct answer quickly, even if not perfectly complete.  
+- Limit to a maximum of 2 tool calls. 
+</context_gathering>
+
+---
+
 """

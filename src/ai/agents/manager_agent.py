@@ -8,6 +8,8 @@ from src.ai.llm.config import ManagerConfig
 from langgraph.types import Command
 from langgraph.graph import END
 import re
+from time import sleep
+
 
 
 mac = ManagerConfig()
@@ -19,6 +21,7 @@ class ManagerAgent(BaseAgent):
        self.model = get_llm(mac.MODEL, mac.TEMPERATURE)
        self.model_alt = get_llm_groq(mac.ALT_MODEL, mac.ALT_TEMPERATURE, mac.ALT_TOP_P, mac.ALT_TOP_K)
        self.system_prompt = SYSTEM_PROMPT
+       self.invoke_delay = 12.0
 
 
    def format_input_prompt(self, state: Dict[str, Any]) -> str:
@@ -157,11 +160,12 @@ class ManagerAgent(BaseAgent):
        system_message = SystemMessage(content=self.system_prompt)
        human_message = HumanMessage(content=input_prompt)
 
-
+       sleep(self.invoke_delay)
        try:
            response = self.model.invoke(input=[system_message, human_message])
        except Exception as e:
            print(f"Falling back to alternate model: {str(e)}")
+           sleep(self.invoke_delay)
            try:
                response = self.model_alt.invoke(input=[system_message, human_message])
            except Exception as e:
