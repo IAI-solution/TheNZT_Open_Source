@@ -117,6 +117,52 @@ Before you begin, ensure you have the following installed on your system:
 
 ### Local Development Setup
 
+### For Windows Users: Installing Ubuntu with WSL2
+If you're on Windows, follow these steps to set up Ubuntu using WSL2:
+#### Quick Setup
+
+**Option 1: Manual Installation via Microsoft Store**
+1. **Enable WSL2**
+   
+   Open PowerShell as Administrator and run:
+```powershell
+   wsl --install --no-distribution
+```
+2. **Download Ubuntu from Microsoft Store**
+   - Open Microsoft Store
+   - Search for "Ubuntu" or "Ubuntu 22.04 LTS"
+   - Click **Get** or **Install**
+   - Launch Ubuntu from Start menu after installation
+   - Create a username and password when prompted
+
+**Option 2: Install Docker Desktop** 
+1. **Download and Install Docker Desktop**
+   - Download from [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+   - During installation, ensure "Use WSL 2 instead of Hyper-V" is checked
+   - Restart if prompted
+2. **Configure Docker with WSL**
+   - Open Docker Desktop
+   - Go to **Settings** → **Resources** → **WSL Integration**
+   - Enable integration with your Ubuntu distribution
+   - Click **Apply & Restart**
+ **Verify Installation**
+   
+   Open Ubuntu terminal and run:
+```bash
+   docker --version
+   docker compose version
+```
+#### Access Your Files
+- Open Ubuntu terminal from Windows Start menu
+- Your Windows files are at: `/mnt/c/Users/YourUsername/`
+- Work in WSL for better performance: `cd ~` (home directory)
+
+#### Access Your Files
+- Open Ubuntu terminal from Windows Start menu
+- Your Windows files are at: `/mnt/c/Users/YourUsername/`
+- Work in WSL for better performance: `cd ~` (home directory)
+For detailed WSL documentation, visit [Microsoft WSL Docs](https://docs.microsoft.com/en-us/windows/wsl/).
+
 #### 1. Clone the Repository
 
 ```bash
@@ -128,33 +174,35 @@ cd TheNZT_Open_Source
 
 Create a `.env` file in the **project root** with your API keys (check .env.example):
 
-```env
+```plaintext
 # Required API Keys
--GEMINI_API_KEY=your_gemini_api_key_here
--TAVILY_API_KEY=your_tavily_api_key_here
--FMP_API_KEY=your_fmp_api_key_here
+GEMINI_API_KEY=<your_gemini_api_key_here>
+TAVILY_API_KEY=<your_tavily_api_key_here>
+FMP_API_KEY=<your_fmp_api_key_here>
 
 
 # Database Configuration
-MONGO_URI=
+MONGO_URI=<URI_HERE>
+MONGO_INITDB_ROOT_USERNAME=< username_here >
+MONGO_INITDB_ROOT_PASSWORD=< password_here >
+MONGO_INITDB_DATABASE=<database_name_here>
+MONGO_HOST=<host_here>
+MONGO_PORT=<port_here>
 
 # Redis Configuration
 
-REDIS_HOST=
-REDIS_PORT=
-REDIS_USERNAME=
-REDIS_PASSWORD=
-
+REDIS_HOST=<host_here>
+REDIS_PORT=<port_here>
+REDIS_USERNAME=<username_here>
+REDIS_PASSWORD=<password_here>
 
 # Frontend Configuration
-
 NEXT_PUBLIC_BASE_URL=http://localhost:8000
-
 ```
 
 ## 2.1 Configure External Services
 
-### FMP 
+### FMP (will be removed in future)
 
 1. Go to [FMP](https://site.financialmodelingprep.com/) and log in (create a free account if you don't have one).
 
@@ -190,40 +238,63 @@ TAVILY_API_KEY=your_tavily_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-### MongoDB (Database)
+---
 
-1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) and log in (create a free account if you don't have one).
+## MongoDB (Local)
 
-2. Create a free cluster.
+This project uses **local MongoDB with Docker Compose**.
 
-3. In the cluster dashboard, click **Connect** → **Connect your application**.
+### Start MongoDB
 
-4. Copy the connection string provided. Example:
+```bash
+docker-compose up -d
 ```
-mongodb+srv://<username>:<password>@cluster0.abcd.mongodb.net/<dbname>?retryWrites=true&w=majority
+
+### Connection String
+
+Use this in your app:
+
+```
+mongodb://<username>:<password>@localhost:27017/<dbname>?authSource=example
 ```
 
-For more details, check out the [MongoDB documentation](https://www.mongodb.com/docs/manual/reference/connection-string/).
+Example:
 
-### Redis (Cache / Broker)
+```
+mongodb://example:example123@localhost:27017/insightdb?authSource=example
+```
 
-1. Go to [Redis Cloud](https://redis.com/cloud/overview/) and sign in (create a free account if needed).
+---
 
-2. Create a free database (recommended for development).
+---
 
-3. In the dashboard, open your database and click **Connect**.
+## Redis (Local)
 
-4. Choose **Connect with Client**, and in the language dropdown, select **Python**.
+This project uses **local Redis with Docker Compose**.
 
-5. Copy the provided details:
-- Host
-- Port
-- Username (often default)
-- Password
+### Start Redis
 
-6. Paste them into your `.env` file under the Redis section.
+```bash
+docker-compose up -d
+```
 
-For more details, check out the [Redis Cloud documentation](https://cloud.redis.io/#/add-subscription/essential).
+### Connection Details
+
+Use this in your app:
+
+```
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=<password_if_set>
+```
+
+If your Redis has **no password**, leave it empty:
+
+```
+REDIS_PASSWORD=
+```
+
+---
 
 > **Note**: You can use `.env.example` as a template if it exists in the repository.
 
@@ -450,10 +521,12 @@ insight-bot/
 │   │   │   ├── fast_agent.py
 │   │   │   ├── finance_data_agent.py
 │   │   │   ├── intent_detector.py
+|   |   |   ├── rag_engine.py 
 │   │   │   ├── manager_agent.py
 │   │   │   ├── map_agent.py
 │   │   │   ├── planner_agent.py
 │   │   │   ├── response_generator_agent.py
+│   │   │   ├── rag_engine.py
 │   │   │   ├── sentiment_analysis_agent.py
 │   │   │   ├── social_media_agent.py
 │   │   │   ├── summarizer.py
@@ -603,6 +676,7 @@ insight-bot/
 ├── .gitignore
 ├── Makefile
 ├── README.md
+├── docker-commands.txt
 └── requirements.txt
 ```
 

@@ -1,0 +1,32 @@
+# 1. List running containers
+docker ps
+
+# 2. List all containers (including stopped)
+docker ps -a
+
+# 3. Start a stopped container
+docker start container_name_or_id
+
+# 4. Stop a running container
+docker stop container_name_or_id
+
+# 5. View logs of a container
+docker logs container_name_or_id
+
+# 6. Follow live logs (like tail -f)
+docker logs -f container_name_or_id
+
+# 7. Inspect container details (IP, mounts, etc.)
+docker inspect container_name_or_id
+
+# 8. List Docker networks
+docker network ls
+
+# 9. Inspect a specific network
+docker network inspect network_name
+
+# 10. Remove a stopped container
+docker rm container_name_or_id
+
+# 11. Remove all stopped containers
+docker container prune
