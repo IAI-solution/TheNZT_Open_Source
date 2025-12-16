@@ -114,6 +114,24 @@ class SearchCompanyInfoTool(BaseTool):
 
         return {"results": results}
 
+
+class CompanyProfileTool(BaseTool):
+    name: str = "get_usa_based_company_profile"
+    description: str = """Use this tool to get company profile information through its ticker symbol.
+This tool provides information of companies registered."""
+    args_schema: Type[BaseModel] = CompanySymbolSchema
+
+    def _run(self, symbol: str, explanation: str):
+        try:
+            #url = f"https://financialmodelingprep.com/api/v3/profile/{symbol}?apikey={fm_api_key}"
+            #response = requests.get(url)
+            response=mongodb.get_or_fetch_company_profile(symbol)
+            # return pretty_format(response.json()) + "\n\n- Source: https://site.financialmodelingprep.com/"
+            #return {"data": response.json(), "source": "https://site.financialmodelingprep.com/"}
+            return response
+        except Exception as e:
+            error_msg = f"Error in getting company profile information: {str(e)}"
+            return error_msg
 class GetStockData(BaseTool):
     name: str = "get_stock_data"
     description: str = """Use this tool to get real-time stock quote data and historical stock prices of companies.
@@ -963,6 +981,247 @@ class GetStockData(BaseTool):
 
         return all_results
     
+class CombinedFinancialStatementTool(BaseTool):
+    name: str = "get_financial_statements"
+    description: str = """Always use this tool whenever user query involves any financial statement data (balance sheet, cash flow statement, or income statement) using various methods for companies in the U.S., India, and other regions and retrieves financial statements data.
+    **Examples of when to call this tool:**
+     - "Apple latest balance sheet 2024"
+     - "Get Apple’s Q2 2025 income statement"
+     - "Give me the balance sheet for Apple"
+     - "Show Tesla's cash flow statement"
+     - "Compare income statements of Google and Microsoft"
+    """
+    # description: str = """This tool retrieves financial statement data (balance sheet, cash flow statement, or income statement) using various methods for companies in the U.S., India, and other regions."""
+
+    args_schema: Type[BaseModel] = CombinedFinancialStatementSchema
+
+    def _run(self, symbol: str, exchangeShortName: str, statement_type: str, period: str = "annual", limit: int = 1, reporting_format: str = "standalone", explanation: str = None) -> str:
+
+        external_data_dir = "external_data"
+        os.makedirs(external_data_dir, exist_ok=True)
+        timestamp = datetime.datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+        # Fetch data based on the exchange
+        # if exchangeShortName in ["NSE", "BSE"]:
+        #     # return self._fetch_screener_data(symbol, statement_type, reporting_format, timestamp)
+        #     return "Use web search tool for non USA data"
+        if exchangeShortName and symbol:
+            return self._fetch_us_data(symbol, statement_type, period, limit, timestamp)
+        else:
+            # return self._fetch_yahoo_data(symbol, statement_type, period, timestamp)
+            return "Use web search tool for non USA data"
+        
+    def _fetch_yahoo_financials(self, symbol: str, statement_type: str, period: str = "annual", limit: int = 5):
+        """
+        Use yfinance to fetch financial statements. Returns a dict:
+        {"source": "yfinance", "currency": <currency>, "data": <list_of_records>}
+        """
+        try:
+            t = yf.Ticker(symbol)
+            # select the requested statement
+            if statement_type == "income_statement":
+                # YF provides .financials (annual) and .quarterly_financials
+                df = t.financials if period == "annual" else t.quarterly_financials
+            elif statement_type == "balance_sheet":
+                df = t.balance_sheet if period == "annual" else t.quarterly_balance_sheet
+            elif statement_type == "cash_flow":
+                df = t.cashflow if period == "annual" else t.quarterly_cashflow
+            else:
+                return {"error": f"Unknown statement_type: {statement_type}"}
+
+            if df is None or df.empty:
+                return {"error": "No data from yfinance", "source": "yfinance", "data": []}
+
+            # Transpose/normalize: yfinance returns columns as dates; convert to list of dicts
+            try:
+                df_t = df.fillna(0).T  # rows are periods
+                df_t.index = [pd.to_datetime(i).strftime("%Y-%m-%d") if not isinstance(i, str) else i for i in df_t.index]
+                records = []
+                for idx, row in df_t.iterrows():
+                    rec = {"period_end": idx}
+                    for col in df_t.columns:
+                        val = row[col]
+                        try:
+                            if pd.isna(val):
+                                rec[col] = None
+                            else:
+                                rec[col] = float(val)
+                        except Exception:
+                            rec[col] = val
+                    records.append(rec)
+            except Exception:
+                # fallback: convert columns to string values
+                records = df.reset_index().to_dict(orient="records")
+
+            # currency: yfinance doesn't always expose currency for statements; try info
+            try:
+                currency = (t.info.get("financialCurrency") or t.info.get("currency") or "USD")
+            except Exception:
+                currency = "USD"
+
+            return {"source": "yfinance", "currency": currency, "data": records[:limit] if limit else records}
+        except Exception as e:
+            return {"error": f"yfinance fetch failed: {e}", "source": "yfinance", "data": []}
+
+
+    def _fetch_us_data(self, symbol: str, statement_type: str, period: str, limit: int, timestamp: str):
+        """Fetches financial statements from MongoDB/FMP, fallback to yfinance if not available."""
+        try:
+            data = mongodb.fetch_financial_data(symbol, statement_type, limit=limit)
+            # If mongodb/FMP returned usable list data, return it
+            if isinstance(data, list) and data:
+                return data
+            # Otherwise fallback to yahoo
+            yf_res = self._fetch_yahoo_financials(symbol, statement_type, period, limit)
+            if isinstance(yf_res, dict) and yf_res.get("data"):
+                # normalize to same style as existing code expects: return the list or small wrapper
+                return {"symbol": symbol, "source": "yfinance", "currency": yf_res.get("currency"), "data": yf_res.get("data")}
+            return {"symbol": symbol, "error": "No financials found from FMP/mongo or yfinance", "source": "none", "data": []}
+        except Exception as e:
+            return {"error": f"Error retrieving {statement_type}: {str(e)}"}
+
+
+    # def _fetch_us_data(self, symbol: str, statement_type: str, period: str, limit: int, timestamp: str):
+    #     """Fetches financial statements from FMP or Yahoo Finance for NYSE/NASDAQ stocks."""
+    #     try:
+    #         # FMP API Call
+    #         fmp_endpoints = {
+    #             "balance_sheet": "balance-sheet-statement",
+    #             "cash_flow": "cash-flow-statement",
+    #             "income_statement": "income-statement"
+    #         }
+    #         # url = f"https://financialmodelingprep.com/api/v3/{fmp_endpoints[statement_type]}/{symbol}?limit={limit}&apikey={fm_api_key}"
+    #         # response = requests.get(url)
+    #         # data = response.json()
+    #         data = mongodb.fetch_financial_data(symbol, statement_type, limit=limit)
+
+    #         if isinstance(data, list) and data:
+    #             if period == 'quarterly':
+    #                 data.append({"Note": "I don't have access to quarterly financial statement data."})
+    #             return data
+    #         else:
+    #             # Fallback to Yahoo Finance
+    #             # return self._fetch_yahoo_data(symbol, statement_type, period, timestamp)
+    #             return data
+    #     except Exception as e:
+    #         error_msg = f"Error retrieving {statement_type} from Financial Modeling Prep: {str(e)}"
+    #         return pretty_format(error_msg)
+
+
+class StockPriceChangeTool(BaseTool):
+    name: str = "get_usa_based_company_stock_price_change"
+    description: str = """Use this tool to get stock price change percentages over predefined periods (1D, 5D, 1M, etc.) for USA based companies only.
+This tool provides information of companies registered in NYSE and NASDAQ only."""
+    args_schema: Type[BaseModel] = CompanySymbolSchema
+
+    def _run(self, symbol: str, explanation: str):
+        try:
+            # url = f"https://financialmodelingprep.com/api/v3/stock-price-change/{symbol}?apikey={fm_api_key}"
+            # response = requests.get(url)
+
+            # return pretty_format(response.json())
+            response = mongodb.fetch_stock_price_change(symbol)
+            return response
+        except Exception as e:
+            error_msg = f"Error in getting stock price changes: {str(e)}"
+            return error_msg
+        
+
+
+class FinancialsDataSchema(BaseModel):
+    """Input schema for the CompanyFinancialsTool."""
+    symbols: List[str] = Field(..., description="A list of stock ticker symbols to fetch data for.")
+    limit: int = Field(5, description="The number of historical annual periods to retrieve. Default is 5.")
+
+
+# class CompanyEssentialFinancialsTool(BaseTool):
+#     name: str = "get_essential_company_finance"
+#     description: str = """
+#     Use this tool to get comprehensive annual financial data for one or more stock symbols.
+#     It retrieves historical data for Revenue, Net Income, EPS, P/E Ratio, Market Cap,
+#     Net Profit Margin, and Cash & Investments from Financial Modeling Prep.
+#     """
+#     args_schema: Type[BaseModel] = FinancialsDataSchema
+
+#     def _run(self, symbols: List[str], limit: int = 5):
+#         print("===company agent===")
+#         all_results = []
+#         with concurrent.futures.ThreadPoolExecutor(max_workers=len(symbols)) as executor:
+#             future_to_symbol = {executor.submit(self._process_symbol, s, limit): s for s in symbols}
+#             for future in concurrent.futures.as_completed(future_to_symbol):
+#                 symbol = future_to_symbol[future]
+#                 try:
+#                     all_results.append(future.result())
+#                 except Exception as e:
+#                     all_results.append({"symbol": symbol, "error": f"An unexpected error occurred: {str(e)}"})
+#         return all_results
+
+#     def _fetch_data(self, url: str):
+#         try:
+#             response = requests.get(url)
+#             response.raise_for_status()
+#             return response.json()
+#         except requests.exceptions.RequestException as err:
+#             print(f"An error occurred: {err} for URL: {url}")
+#         return None
+
+#     def _process_symbol(self, symbol: str, limit: int):
+#         print(f"--Tool Call: Fetching financial data for {symbol}--")       
+
+#         base_url = "https://financialmodelingprep.com/stable"
+#         urls = {
+#             "income": f"{base_url}/income-statement?symbol={symbol}&period=annual&limit={limit}&apikey={fm_api_key}",
+#             "balance": f"{base_url}/balance-sheet-statement?symbol={symbol}&period=annual&limit={limit}&apikey={fm_api_key}",
+#             "metrics": f"{base_url}/key-metrics?symbol={symbol}&period=annual&limit={limit}&apikey={fm_api_key}",
+#             "ratios": f"{base_url}/ratios?symbol={symbol}&period=annual&limit={limit}&apikey={fm_api_key}"
+#         }
+        
+#         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+#             future_to_url = {executor.submit(self._fetch_data, url): key for key, url in urls.items()}
+#             data_map = {future_to_url[future]: future.result() for future in concurrent.futures.as_completed(future_to_url)}
+
+#         income_data, balance_data, metrics_data, ratios_data = data_map.get("income"), data_map.get("balance"), data_map.get("metrics"), data_map.get("ratios")
+
+#         if not all((income_data, balance_data, metrics_data)):
+#             return {"symbol": symbol, "error": "Failed to fetch complete financial data."}
+
+#         consolidated = {}
+#         for item in income_data:
+#             year = str(item.get("fiscalYear"))
+#             if year:
+#                 consolidated[year] = {
+#                     "revenue": item.get("revenue"), 
+#                     "netIncome": item.get("netIncome"), 
+#                     "eps": item.get("eps")
+#                 }
+        
+#         for item in balance_data:
+#             year = str(item.get("fiscalYear"))
+#             if year in consolidated:
+#                 consolidated[year]["cashAndInvestments"] = item.get("cashAndCashEquivalents", 0) + item.get("shortTermInvestments", 0)
+
+#         for item in metrics_data:
+#             year = str(item.get("fiscalYear"))
+#             if year in consolidated:
+#                 consolidated[year].update({
+#                     "marketCap": item.get("marketCap"),
+#                 })
+
+#         for item in ratios_data:
+#             year = str(item.get("fiscalYear"))
+#             if year in consolidated:
+#                 consolidated[year].update({
+#                     "netProfitMargin": item.get("netProfitMargin"),
+#                     "priceToEarningsRatio": item.get("priceToEarningsRatio")                    
+#                 })
+
+#         final_data = sorted([{"year": y, **d} for y, d in consolidated.items()], key=lambda x: x['year'], reverse=True)
+
+#         print("<data_returned_from_get_essential_company_finance>")
+#         print({"symbol": symbol, "financials": final_data})
+#         print("</data_returned_from_get_essential_company_finance>")
+        
+#         return {"symbol": symbol, "financials": final_data}
 
 class YFinanceFinancialStatementSchema(BaseModel):
     """Schema for YFinance financial statement fetching."""
@@ -1250,392 +1509,145 @@ class YFinanceFinancialStatementTool(BaseTool):
         return self._run(*args, **kwargs)
 
 
-search_company_info = SearchCompanyInfoTool()
-get_stock_data = GetStockData()
-get_financial_statements = YFinanceFinancialStatementTool()
-advanced_internet_search = AdvancedInternetSearchTool()
+# Pydantic models
+class Metric(BaseModel):
+    year: int = Field(description="The year of the financial metrics")
+    gdp_growth_rate: Optional[float] = Field(description="Annual GDP growth rate in percentage")
+    inflation_rate: Optional[float] = Field(description="Consumer Price Index inflation rate in percentage")
+    debt_to_gdp_ratio: Optional[float] = Field(description="Debt as a percentage of GDP")
+    trade_balance: Optional[float] = Field(description="Exports minus imports as a percentage of GDP")
+    fdi_inflows: Optional[float] = Field(description="Foreign Direct Investment inflows as a percentage of GDP")
 
+class CountryFinancial(BaseModel):
+    country: str = Field(description="Name of the country")
+    list_of_metrics: List[Metric] = Field(description="List of financial metrics for the country over different years")
+
+class CountryFinancialInput(BaseModel):
+    country: str = Field(description="Name of the country")
+
+# Tavily web search function (as provided)
+def tavily_web_search(query: str, num_results: int = 2):
+    response = tavily_client.search(
+        query=query,
+        max_results=5,
+        include_raw_content=False,
+        search_depth="advanced",
+        include_answer=True,
+    )
+    print("\n ============Here is list of answer from tavily ======== \n")
+    print(response)
+    print(" \n ============ End list of tavily answers ===========\n")
+    
+    concise_answer = response.get('answer')
+    sources = [
+        {
+            'title': result.get('title', 'No Title'),
+            'url': result.get('url'),
+        }
+        for result in response.get('results', [])
+    ]
+    formatted_results = {
+        "concise answer": concise_answer,
+        "sources": sources
+    }
+    print(f"formatted_results = {formatted_results}")
+    return formatted_results
+
+# CountryFinancialTool implementation
+class CountryFinancialTool(BaseTool):
+    name: str = "get_essential_country_economics"
+    description: str = "Fetches GDP Growth Rate (Annual %), Inflation Rate (CPI, %), Debt-to-GDP Ratio (%), Trade Balance (% of GDP), and FDI Inflows (% of GDP) for a given country."
+    args_schema: Type[BaseModel] = CountryFinancialInput
+
+    def _run(self, country: str) -> CountryFinancial:
+
+        print(" ====== Country Agent =======")
+        current_year = datetime.now().year
+        years = list(range(current_year -3 , current_year + 1))  # Last 4 years: 2021–2024
+        metrics = [
+            ("GDP growth rate", "gdp_growth_rate"),
+            ("inflation rate", "inflation_rate"),
+            ("debt-to-GDP ratio", "debt_to_gdp_ratio"),
+            ("trade balance as a percentage of GDP", "trade_balance"),
+            ("FDI inflows as a percentage of GDP", "fdi_inflows")
+        ]
+        
+        # Generate questions
+        questions = [
+            f"what is the {metric[0]} for {country} for the year {year}?"
+            for year in years
+            for metric in metrics
+        ]
+        
+        # Initialize the list of metrics for the country
+        metric_list = []
+        for year in years:
+            metric_data = {
+                "year": year,
+                "gdp_growth_rate": None,
+                "inflation_rate": None,
+                "debt_to_gdp_ratio": None,
+                "trade_balance": None,
+                "fdi_inflows": None
+            }
+            
+            # Query Tavily for each metric
+            for metric_name, metric_key in metrics:
+                query = f"what is the {metric_name} for {country} for the year {year}?"
+                try:
+                    result = tavily_web_search(query, num_results=2)
+                    concise_answer = result.get("concise answer")
+                    
+                    # Extract numerical value from the answer
+                    if concise_answer:
+                        # Look for percentage values (e.g., "5.0%", "-1.2%")
+                        numbers = re.findall(r"[-]?\d+\.?\d*%", concise_answer)
+                        if numbers:
+                            try:
+                                value = float(numbers[0].strip("%"))
+                                metric_data[metric_key] = value
+                            except ValueError:
+                                print(f"Failed to parse number for {metric_name}, {year}: {concise_answer}")
+                        else:
+                            print(f"No percentage value found for {metric_name}, {year}: {concise_answer}")
+                    else:
+                        print(f"No concise answer for {metric_name}, {year}")
+                    time.sleep(1.2)  # Avoid rate limiting
+                except Exception as e:
+                    print(f"Error querying {metric_name} for {year}: {e}")
+            
+            metric_list.append(Metric(**metric_data))
+        
+        return CountryFinancial(country=country, list_of_metrics=metric_list)
+
+
+
+
+# get_country_financial = CountryFinancialTool()
+# get_company_essential_financials = CompanyEssentialFinancialsTool()
+
+search_company_info = SearchCompanyInfoTool()
+# get_usa_based_company_profile = CompanyProfileTool()
+get_stock_data = GetStockData()
+# get_financial_statements = CombinedFinancialStatementTool()
+get_financial_statements = YFinanceFinancialStatementTool()
+# get_currency_exchange_rates = CurrencyRateTool()
+advanced_internet_search = AdvancedInternetSearchTool()
+# get_market_capital_data = MarketCapTool()
+# get_crypto_data_tool = GetCryptoDataTool()
 
 tool_list = [
     search_company_info,
     get_stock_data,
     get_financial_statements,
+    # get_currency_exchange_rates,
     advanced_internet_search,
+    # get_company_essential_financials,
+    # get_market_capital_data
+    # get_crypto_data_tool
 ]
 
 
 # if __name__ == "__main__":
     # Testing get_essential_company_finance tool
     # get_company_essential_financials._run(symbols=["AMZN"])
-
-# class CompanyProfileTool(BaseTool):
-#     name: str = "get_usa_based_company_profile"
-#     description: str = """Use this tool to get company profile information through its ticker symbol.
-# This tool provides information of companies registered."""
-#     args_schema: Type[BaseModel] = CompanySymbolSchema
-
-#     def _run(self, symbol: str, explanation: str):
-#         try:
-#             #url = f"https://financialmodelingprep.com/api/v3/profile/{symbol}?apikey={fm_api_key}"
-#             #response = requests.get(url)
-#             response=mongodb.get_or_fetch_company_profile(symbol)
-#             # return pretty_format(response.json()) + "\n\n- Source: https://site.financialmodelingprep.com/"
-#             #return {"data": response.json(), "source": "https://site.financialmodelingprep.com/"}
-#             return response
-#         except Exception as e:
-#             error_msg = f"Error in getting company profile information: {str(e)}"
-#             return error_msg
-
-# class CombinedFinancialStatementTool(BaseTool):
-#     name: str = "get_financial_statements"
-#     description: str = """Always use this tool whenever user query involves any financial statement data (balance sheet, cash flow statement, or income statement) using various methods for companies in the U.S., India, and other regions and retrieves financial statements data.
-#     **Examples of when to call this tool:**
-#      - "Apple latest balance sheet 2024"
-#      - "Get Apple’s Q2 2025 income statement"
-#      - "Give me the balance sheet for Apple"
-#      - "Show Tesla's cash flow statement"
-#      - "Compare income statements of Google and Microsoft"
-#     """
-#     # description: str = """This tool retrieves financial statement data (balance sheet, cash flow statement, or income statement) using various methods for companies in the U.S., India, and other regions."""
-
-#     args_schema: Type[BaseModel] = CombinedFinancialStatementSchema
-
-#     def _run(self, symbol: str, exchangeShortName: str, statement_type: str, period: str = "annual", limit: int = 1, reporting_format: str = "standalone", explanation: str = None) -> str:
-
-#         external_data_dir = "external_data"
-#         os.makedirs(external_data_dir, exist_ok=True)
-#         timestamp = datetime.datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-
-#         # Fetch data based on the exchange
-#         # if exchangeShortName in ["NSE", "BSE"]:
-#         #     # return self._fetch_screener_data(symbol, statement_type, reporting_format, timestamp)
-#         #     return "Use web search tool for non USA data"
-#         if exchangeShortName and symbol:
-#             return self._fetch_us_data(symbol, statement_type, period, limit, timestamp)
-#         else:
-#             # return self._fetch_yahoo_data(symbol, statement_type, period, timestamp)
-#             return "Use web search tool for non USA data"
-        
-#     def _fetch_yahoo_financials(self, symbol: str, statement_type: str, period: str = "annual", limit: int = 5):
-#         """
-#         Use yfinance to fetch financial statements. Returns a dict:
-#         {"source": "yfinance", "currency": <currency>, "data": <list_of_records>}
-#         """
-#         try:
-#             t = yf.Ticker(symbol)
-#             # select the requested statement
-#             if statement_type == "income_statement":
-#                 # YF provides .financials (annual) and .quarterly_financials
-#                 df = t.financials if period == "annual" else t.quarterly_financials
-#             elif statement_type == "balance_sheet":
-#                 df = t.balance_sheet if period == "annual" else t.quarterly_balance_sheet
-#             elif statement_type == "cash_flow":
-#                 df = t.cashflow if period == "annual" else t.quarterly_cashflow
-#             else:
-#                 return {"error": f"Unknown statement_type: {statement_type}"}
-
-#             if df is None or df.empty:
-#                 return {"error": "No data from yfinance", "source": "yfinance", "data": []}
-
-#             # Transpose/normalize: yfinance returns columns as dates; convert to list of dicts
-#             try:
-#                 df_t = df.fillna(0).T  # rows are periods
-#                 df_t.index = [pd.to_datetime(i).strftime("%Y-%m-%d") if not isinstance(i, str) else i for i in df_t.index]
-#                 records = []
-#                 for idx, row in df_t.iterrows():
-#                     rec = {"period_end": idx}
-#                     for col in df_t.columns:
-#                         val = row[col]
-#                         try:
-#                             if pd.isna(val):
-#                                 rec[col] = None
-#                             else:
-#                                 rec[col] = float(val)
-#                         except Exception:
-#                             rec[col] = val
-#                     records.append(rec)
-#             except Exception:
-#                 # fallback: convert columns to string values
-#                 records = df.reset_index().to_dict(orient="records")
-
-#             # currency: yfinance doesn't always expose currency for statements; try info
-#             try:
-#                 currency = (t.info.get("financialCurrency") or t.info.get("currency") or "USD")
-#             except Exception:
-#                 currency = "USD"
-
-#             return {"source": "yfinance", "currency": currency, "data": records[:limit] if limit else records}
-#         except Exception as e:
-#             return {"error": f"yfinance fetch failed: {e}", "source": "yfinance", "data": []}
-
-
-#     def _fetch_us_data(self, symbol: str, statement_type: str, period: str, limit: int, timestamp: str):
-#         """Fetches financial statements from MongoDB/FMP, fallback to yfinance if not available."""
-#         try:
-#             data = mongodb.fetch_financial_data(symbol, statement_type, limit=limit)
-#             # If mongodb/FMP returned usable list data, return it
-#             if isinstance(data, list) and data:
-#                 return data
-#             # Otherwise fallback to yahoo
-#             yf_res = self._fetch_yahoo_financials(symbol, statement_type, period, limit)
-#             if isinstance(yf_res, dict) and yf_res.get("data"):
-#                 # normalize to same style as existing code expects: return the list or small wrapper
-#                 return {"symbol": symbol, "source": "yfinance", "currency": yf_res.get("currency"), "data": yf_res.get("data")}
-#             return {"symbol": symbol, "error": "No financials found from FMP/mongo or yfinance", "source": "none", "data": []}
-#         except Exception as e:
-#             return {"error": f"Error retrieving {statement_type}: {str(e)}"}
-
-
-#     # def _fetch_us_data(self, symbol: str, statement_type: str, period: str, limit: int, timestamp: str):
-#     #     """Fetches financial statements from FMP or Yahoo Finance for NYSE/NASDAQ stocks."""
-#     #     try:
-#     #         # FMP API Call
-#     #         fmp_endpoints = {
-#     #             "balance_sheet": "balance-sheet-statement",
-#     #             "cash_flow": "cash-flow-statement",
-#     #             "income_statement": "income-statement"
-#     #         }
-#     #         # url = f"https://financialmodelingprep.com/api/v3/{fmp_endpoints[statement_type]}/{symbol}?limit={limit}&apikey={fm_api_key}"
-#     #         # response = requests.get(url)
-#     #         # data = response.json()
-#     #         data = mongodb.fetch_financial_data(symbol, statement_type, limit=limit)
-
-#     #         if isinstance(data, list) and data:
-#     #             if period == 'quarterly':
-#     #                 data.append({"Note": "I don't have access to quarterly financial statement data."})
-#     #             return data
-#     #         else:
-#     #             # Fallback to Yahoo Finance
-#     #             # return self._fetch_yahoo_data(symbol, statement_type, period, timestamp)
-#     #             return data
-#     #     except Exception as e:
-#     #         error_msg = f"Error retrieving {statement_type} from Financial Modeling Prep: {str(e)}"
-#     #         return pretty_format(error_msg)
-
-
-# class StockPriceChangeTool(BaseTool):
-#     name: str = "get_usa_based_company_stock_price_change"
-#     description: str = """Use this tool to get stock price change percentages over predefined periods (1D, 5D, 1M, etc.) for USA based companies only.
-# This tool provides information of companies registered in NYSE and NASDAQ only."""
-#     args_schema: Type[BaseModel] = CompanySymbolSchema
-
-#     def _run(self, symbol: str, explanation: str):
-#         try:
-#             # url = f"https://financialmodelingprep.com/api/v3/stock-price-change/{symbol}?apikey={fm_api_key}"
-#             # response = requests.get(url)
-
-#             # return pretty_format(response.json())
-#             response = mongodb.fetch_stock_price_change(symbol)
-#             return response
-#         except Exception as e:
-#             error_msg = f"Error in getting stock price changes: {str(e)}"
-#             return error_msg
-        
-
-# class FinancialsDataSchema(BaseModel):
-#     """Input schema for the CompanyFinancialsTool."""
-#     symbols: List[str] = Field(..., description="A list of stock ticker symbols to fetch data for.")
-#     limit: int = Field(5, description="The number of historical annual periods to retrieve. Default is 5.")
-
-
-# class CompanyEssentialFinancialsTool(BaseTool):
-#     name: str = "get_essential_company_finance"
-#     description: str = """
-#     Use this tool to get comprehensive annual financial data for one or more stock symbols.
-#     It retrieves historical data for Revenue, Net Income, EPS, P/E Ratio, Market Cap,
-#     Net Profit Margin, and Cash & Investments from Financial Modeling Prep.
-#     """
-#     args_schema: Type[BaseModel] = FinancialsDataSchema
-
-#     def _run(self, symbols: List[str], limit: int = 5):
-#         print("===company agent===")
-#         all_results = []
-#         with concurrent.futures.ThreadPoolExecutor(max_workers=len(symbols)) as executor:
-#             future_to_symbol = {executor.submit(self._process_symbol, s, limit): s for s in symbols}
-#             for future in concurrent.futures.as_completed(future_to_symbol):
-#                 symbol = future_to_symbol[future]
-#                 try:
-#                     all_results.append(future.result())
-#                 except Exception as e:
-#                     all_results.append({"symbol": symbol, "error": f"An unexpected error occurred: {str(e)}"})
-#         return all_results
-
-#     def _fetch_data(self, url: str):
-#         try:
-#             response = requests.get(url)
-#             response.raise_for_status()
-#             return response.json()
-#         except requests.exceptions.RequestException as err:
-#             print(f"An error occurred: {err} for URL: {url}")
-#         return None
-
-#     def _process_symbol(self, symbol: str, limit: int):
-#         print(f"--Tool Call: Fetching financial data for {symbol}--")       
-
-#         base_url = "https://financialmodelingprep.com/stable"
-#         urls = {
-#             "income": f"{base_url}/income-statement?symbol={symbol}&period=annual&limit={limit}&apikey={fm_api_key}",
-#             "balance": f"{base_url}/balance-sheet-statement?symbol={symbol}&period=annual&limit={limit}&apikey={fm_api_key}",
-#             "metrics": f"{base_url}/key-metrics?symbol={symbol}&period=annual&limit={limit}&apikey={fm_api_key}",
-#             "ratios": f"{base_url}/ratios?symbol={symbol}&period=annual&limit={limit}&apikey={fm_api_key}"
-#         }
-        
-#         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-#             future_to_url = {executor.submit(self._fetch_data, url): key for key, url in urls.items()}
-#             data_map = {future_to_url[future]: future.result() for future in concurrent.futures.as_completed(future_to_url)}
-
-#         income_data, balance_data, metrics_data, ratios_data = data_map.get("income"), data_map.get("balance"), data_map.get("metrics"), data_map.get("ratios")
-
-#         if not all((income_data, balance_data, metrics_data)):
-#             return {"symbol": symbol, "error": "Failed to fetch complete financial data."}
-
-#         consolidated = {}
-#         for item in income_data:
-#             year = str(item.get("fiscalYear"))
-#             if year:
-#                 consolidated[year] = {
-#                     "revenue": item.get("revenue"), 
-#                     "netIncome": item.get("netIncome"), 
-#                     "eps": item.get("eps")
-#                 }
-        
-#         for item in balance_data:
-#             year = str(item.get("fiscalYear"))
-#             if year in consolidated:
-#                 consolidated[year]["cashAndInvestments"] = item.get("cashAndCashEquivalents", 0) + item.get("shortTermInvestments", 0)
-
-#         for item in metrics_data:
-#             year = str(item.get("fiscalYear"))
-#             if year in consolidated:
-#                 consolidated[year].update({
-#                     "marketCap": item.get("marketCap"),
-#                 })
-
-#         for item in ratios_data:
-#             year = str(item.get("fiscalYear"))
-#             if year in consolidated:
-#                 consolidated[year].update({
-#                     "netProfitMargin": item.get("netProfitMargin"),
-#                     "priceToEarningsRatio": item.get("priceToEarningsRatio")                    
-#                 })
-
-#         final_data = sorted([{"year": y, **d} for y, d in consolidated.items()], key=lambda x: x['year'], reverse=True)
-
-#         print("<data_returned_from_get_essential_company_finance>")
-#         print({"symbol": symbol, "financials": final_data})
-#         print("</data_returned_from_get_essential_company_finance>")
-        
-#         return {"symbol": symbol, "financials": final_data}
-
-
-
-# # CountryFinancialTool implementation
-# class CountryFinancialTool(BaseTool):
-#     name: str = "get_essential_country_economics"
-#     description: str = "Fetches GDP Growth Rate (Annual %), Inflation Rate (CPI, %), Debt-to-GDP Ratio (%), Trade Balance (% of GDP), and FDI Inflows (% of GDP) for a given country."
-#     args_schema: Type[BaseModel] = CountryFinancialInput
-
-#     def _run(self, country: str) -> CountryFinancial:
-
-#         print(" ====== Country Agent =======")
-#         current_year = datetime.now().year
-#         years = list(range(current_year -3 , current_year + 1))  # Last 4 years: 2021–2024
-#         metrics = [
-#             ("GDP growth rate", "gdp_growth_rate"),
-#             ("inflation rate", "inflation_rate"),
-#             ("debt-to-GDP ratio", "debt_to_gdp_ratio"),
-#             ("trade balance as a percentage of GDP", "trade_balance"),
-#             ("FDI inflows as a percentage of GDP", "fdi_inflows")
-#         ]
-        
-#         # Generate questions
-#         questions = [
-#             f"what is the {metric[0]} for {country} for the year {year}?"
-#             for year in years
-#             for metric in metrics
-#         ]
-        
-#         # Initialize the list of metrics for the country
-#         metric_list = []
-#         for year in years:
-#             metric_data = {
-#                 "year": year,
-#                 "gdp_growth_rate": None,
-#                 "inflation_rate": None,
-#                 "debt_to_gdp_ratio": None,
-#                 "trade_balance": None,
-#                 "fdi_inflows": None
-#             }
-            
-#             # Query Tavily for each metric
-#             for metric_name, metric_key in metrics:
-#                 query = f"what is the {metric_name} for {country} for the year {year}?"
-#                 try:
-#                     result = tavily_web_search(query, num_results=2)
-#                     concise_answer = result.get("concise answer")
-                    
-#                     # Extract numerical value from the answer
-#                     if concise_answer:
-#                         # Look for percentage values (e.g., "5.0%", "-1.2%")
-#                         numbers = re.findall(r"[-]?\d+\.?\d*%", concise_answer)
-#                         if numbers:
-#                             try:
-#                                 value = float(numbers[0].strip("%"))
-#                                 metric_data[metric_key] = value
-#                             except ValueError:
-#                                 print(f"Failed to parse number for {metric_name}, {year}: {concise_answer}")
-#                         else:
-#                             print(f"No percentage value found for {metric_name}, {year}: {concise_answer}")
-#                     else:
-#                         print(f"No concise answer for {metric_name}, {year}")
-#                     time.sleep(1.2)  # Avoid rate limiting
-#                 except Exception as e:
-#                     print(f"Error querying {metric_name} for {year}: {e}")
-            
-#             metric_list.append(Metric(**metric_data))
-        
-#         return CountryFinancial(country=country, list_of_metrics=metric_list)
-
-# # Pydantic models
-# class Metric(BaseModel):
-#     year: int = Field(description="The year of the financial metrics")
-#     gdp_growth_rate: Optional[float] = Field(description="Annual GDP growth rate in percentage")
-#     inflation_rate: Optional[float] = Field(description="Consumer Price Index inflation rate in percentage")
-#     debt_to_gdp_ratio: Optional[float] = Field(description="Debt as a percentage of GDP")
-#     trade_balance: Optional[float] = Field(description="Exports minus imports as a percentage of GDP")
-#     fdi_inflows: Optional[float] = Field(description="Foreign Direct Investment inflows as a percentage of GDP")
-
-# class CountryFinancial(BaseModel):
-#     country: str = Field(description="Name of the country")
-#     list_of_metrics: List[Metric] = Field(description="List of financial metrics for the country over different years")
-
-# class CountryFinancialInput(BaseModel):
-#     country: str = Field(description="Name of the country")
-
-# # Tavily web search function (as provided)
-# def tavily_web_search(query: str, num_results: int = 2):
-#     response = tavily_client.search(
-#         query=query,
-#         max_results=5,
-#         include_raw_content=False,
-#         search_depth="advanced",
-#         include_answer=True,
-#     )
-#     print("\n ============Here is list of answer from tavily ======== \n")
-#     print(response)
-#     print(" \n ============ End list of tavily answers ===========\n")
-    
-#     concise_answer = response.get('answer')
-#     sources = [
-#         {
-#             'title': result.get('title', 'No Title'),
-#             'url': result.get('url'),
-#         }
-#         for result in response.get('results', [])
-#     ]
-#     formatted_results = {
-#         "concise answer": concise_answer,
-#         "sources": sources
-#     }
-#     print(f"formatted_results = {formatted_results}")
-#     return formatted_results

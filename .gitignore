@@ -54,5 +54,3 @@ selenium_driver/
 .azure-cmd/
 .github/
 nginx/
-pygments_style.css
-katex.min.css
