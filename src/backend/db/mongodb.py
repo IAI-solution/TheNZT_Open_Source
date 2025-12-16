@@ -216,23 +216,88 @@ def fetch_financial_data(symbol: str, statement_type: str, period: str = "annual
 
     return record["data"]
 
+# def get_historical_data_fmp(ticker: str, period: str):
+#     today = datetime.now()
+#     from_date = datetime(today.year, 1, 1)
+#     ytd_days=today-from_date
+#     days_map = {"1M": 30, "3M": 90, "6M": 180, "1Y": 365, "5Y": 1825,"MAX": 7300,"YTD":ytd_days.days}
+#     days = days_map.get(period, 30)
+#     to_date = datetime.now()
+#     from_date = to_date - timedelta(days=days)
+
+#     # url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{ticker}?from={from_date.date()}&to={to_date.date()}&apikey={FMP_API_KEY}"
+#     url = f"https://financialmodelingprep.com/stable/historical-price-eod/full?symbol={ticker}&from={from_date.date()}&to={to_date.date()}&apikey={FMP_API_KEY}"
+#     response = requests.get(url)
+#     response.raise_for_status()
+#     return response.json()
+
 def get_historical_data_fmp(ticker: str, period: str):
-    today = datetime.now()
-    from_date = datetime(today.year, 1, 1)
-    ytd_days=today-from_date
-    days_map = {"1M": 30, "3M": 90, "6M": 180, "1Y": 365, "5Y": 1825,"MAX": 7300,"YTD":ytd_days.days}
+    today = datetime.now(timezone.utc)
+    
+    # FIX: Make sure from_date for YTD is also timezone-aware
+    from_date_ytd = datetime(today.year, 1, 1, tzinfo=timezone.utc)
+    ytd_days = today - from_date_ytd
+    
+    days_map = {
+        "1M": 30, 
+        "3M": 90, 
+        "6M": 180, 
+        "1Y": 365, 
+        "5Y": 1825,
+        "MAX": 7300,
+        "YTD": ytd_days.days
+    }
+    
     days = days_map.get(period, 30)
-    to_date = datetime.now()
+    to_date = datetime.now(timezone.utc)
     from_date = to_date - timedelta(days=days)
 
-    # url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{ticker}?from={from_date.date()}&to={to_date.date()}&apikey={FMP_API_KEY}"
-    url = f"https://financialmodelingprep.com/stable/historical-price-eod/full?symbol={ticker}&from={from_date.date()}&to={to_date.date()}&apikey={FMP_API_KEY}"
+    url = f"https://financialmodelingprep.com/api/v3/historical-price-full/{ticker}?from={from_date.date()}&to={to_date.date()}&apikey={FMP_API_KEY}"
     response = requests.get(url)
     response.raise_for_status()
     return response.json()
 
+# def get_or_update_historical(ticker: str, period: str) -> dict:
+#     now = datetime.now()
+#     ticker = ticker.upper()
+#     client = MongoClient(MONGO_URI)
+#     db = client["insight_agent_fmp"]
+#     historical_collection = db["historical_data"]
+
+#     record = historical_collection.find_one({"ticker": ticker, "period": period})
+#     if record:
+#         # if (now - record["last_updated"]) < timedelta(hours=24):
+#         #     return record["data"]
+#         if now.date() == record["last_updated"].date():
+#             return record["data"]
+#         else:
+#             data = get_historical_data_fmp(ticker, period)
+#             updated_record = historical_collection.find_one_and_update(
+#                 {"_id": record["_id"]},
+#                 {"$set": {"data": data, "last_updated": now}},
+#                 return_document=ReturnDocument.AFTER
+#             )
+#             return updated_record["data"]
+#     else:
+#         data = get_historical_data_fmp(ticker, period)
+#         try:
+#             new_doc = {
+#                 "ticker": ticker,
+#                 "period": period,
+#                 "data": data,
+#                 "last_updated": now
+#             }
+#             historical_collection.insert_one(new_doc)
+#         except Exception as insert_error:
+#             record = historical_collection.find_one({"ticker": ticker, "period": period})
+#             if record:
+#                 return record["data"]
+#             else:
+#                 raise insert_error
+#         return data
+
 def get_or_update_historical(ticker: str, period: str) -> dict:
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     ticker = ticker.upper()
     client = MongoClient(MONGO_URI)
     db = client["insight_agent_fmp"]
@@ -240,9 +305,16 @@ def get_or_update_historical(ticker: str, period: str) -> dict:
 
     record = historical_collection.find_one({"ticker": ticker, "period": period})
     if record:
-        # if (now - record["last_updated"]) < timedelta(hours=24):
-        #     return record["data"]
-        if now.date() == record["last_updated"].date():
+        # FIX: Ensure last_updated is timezone-aware before comparison
+        last_updated = record["last_updated"]
+        
+        # Make last_updated timezone-aware if it's naive
+        if last_updated.tzinfo is None or last_updated.tzinfo.utcoffset(last_updated) is None:
+            # Assume UTC for naive datetimes from database
+            last_updated = last_updated.replace(tzinfo=timezone.utc)
+        
+        # Now both are timezone-aware, comparison will work
+        if now.date() == last_updated.date():
             return record["data"]
         else:
             data = get_historical_data_fmp(ticker, period)
@@ -269,6 +341,8 @@ def get_or_update_historical(ticker: str, period: str) -> dict:
             else:
                 raise insert_error
         return data
+
+
 
 def fetch_stock_price_change(symbol: str) -> dict:
     """
