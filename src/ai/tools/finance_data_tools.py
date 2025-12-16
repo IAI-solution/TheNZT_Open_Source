@@ -543,6 +543,290 @@ class GetStockData(BaseTool):
 
         return all_results
 
+class YFinanceFinancialStatementSchema(BaseModel):
+    """Schema for YFinance financial statement fetching."""
+    symbol: str = Field(
+        description="Stock ticker symbol (e.g., 'AAPL', 'MSFT', 'GOOGL')"
+    )
+    statement_type: Literal["all", "income_statement", "balance_sheet", "cash_flow"] = Field(
+        default="all",
+        description="Type of financial statement to fetch: 'all' for all statements, 'income_statement', 'balance_sheet', or 'cash_flow'"
+    )
+    period: Literal["annual", "quarterly"] = Field(
+        default="annual",
+        description="Period type: 'annual' for yearly statements or 'quarterly' for quarterly statements"
+    )
+    limit: Optional[int] = Field(
+        default=None,
+        description="Number of periods to return. None returns all available periods"
+    )
+
+
+class YFinanceFinancialStatementTool(BaseTool):
+    """Tool to fetch financial statements from Yahoo Finance using yfinance library."""
+    
+    name: str = "get_financial_statements"
+    description: str = """Fetches financial statement data (balance sheet, cash flow statement, income statement, or all statements) 
+    from Yahoo Finance using the yfinance library for any publicly traded company.
+    
+    **Examples of when to call this tool:**
+     - "Get Apple's latest financial statements"
+     - "Show me Tesla's annual income statement"
+     - "Fetch Microsoft's quarterly cash flow for the last 4 quarters"
+     - "Get all financial statements for GOOGL"
+     - "Show Amazon's balance sheet"
+    
+    Returns comprehensive financial data including all line items from Yahoo Finance.
+    """
+    
+    args_schema: Type[BaseModel] = YFinanceFinancialStatementSchema
+    
+    def _run(
+        self,
+        symbol: str,
+        statement_type: str = "all",
+        period: str = "annual",
+        limit: Optional[int] = None
+    ) -> Dict:
+        """
+        Execute the tool to fetch financial statements.
+        
+        Args:
+            symbol: Stock ticker symbol
+            statement_type: Type of statement ('all', 'income_statement', 'balance_sheet', 'cash_flow')
+            period: 'annual' or 'quarterly'
+            limit: Number of periods to return
+            
+        Returns:
+            Dictionary containing financial statement data
+        """
+        print(f"\n[DEBUG] YFinance Tool called with:")
+        print(f"  Symbol: {symbol}")
+        print(f"  Statement Type: {statement_type}")
+        print(f"  Period: {period}")
+        print(f"  Limit: {limit}")
+        
+        try:
+            ticker = yf.Ticker(symbol)
+            print(f"[DEBUG] Created yfinance Ticker object for {symbol}")
+            
+            # Get currency info
+            try:
+                info = ticker.info
+                currency = info.get("financialCurrency") or info.get("currency") or "USD"
+                print(f"[DEBUG] Currency detected: {currency}")
+            except Exception as e:
+                currency = "USD"
+                print(f"[DEBUG] Could not get currency, defaulting to USD. Error: {e}")
+            
+            result = {
+                'symbol': symbol.upper(),
+                'currency': currency,
+                'period': period,
+                'errors': []
+            }
+            
+            # Fetch requested statement(s)
+            if statement_type == "all":
+                print("[DEBUG] Fetching all statements...")
+                result['income_statement'] = self._fetch_income_statement(ticker, period, limit, result['errors'])
+                result['balance_sheet'] = self._fetch_balance_sheet(ticker, period, limit, result['errors'])
+                result['cash_flow'] = self._fetch_cash_flow(ticker, period, limit, result['errors'])
+            elif statement_type == "income_statement":
+                print("[DEBUG] Fetching income statement...")
+                result['income_statement'] = self._fetch_income_statement(ticker, period, limit, result['errors'])
+            elif statement_type == "balance_sheet":
+                print("[DEBUG] Fetching balance sheet...")
+                result['balance_sheet'] = self._fetch_balance_sheet(ticker, period, limit, result['errors'])
+            elif statement_type == "cash_flow":
+                print("[DEBUG] Fetching cash flow...")
+                result['cash_flow'] = self._fetch_cash_flow(ticker, period, limit, result['errors'])
+            else:
+                result['errors'].append(f"Unknown statement_type: {statement_type}")
+                print(f"[DEBUG] Unknown statement type: {statement_type}")
+            
+            print(f"\n[DEBUG] Final result summary:")
+            print(f"  Symbol: {result.get('symbol')}")
+            print(f"  Currency: {result.get('currency')}")
+            print(f"  Income Statement records: {len(result.get('income_statement', []))}")
+            print(f"  Balance Sheet records: {len(result.get('balance_sheet', []))}")
+            print(f"  Cash Flow records: {len(result.get('cash_flow', []))}")
+            print(f"  Errors: {result.get('errors')}")
+            
+            if result.get('income_statement'):
+                print(f"\n[DEBUG] Sample Income Statement (first record):")
+                print(f"  Period: {result['income_statement'][0].get('period_end')}")
+                print(f"  Keys: {list(result['income_statement'][0].keys())[:10]}...")
+            
+            return result
+            
+        except Exception as e:
+            error_msg = f"Failed to fetch data for {symbol}: {str(e)}"
+            print(f"[DEBUG] ERROR: {error_msg}")
+            return {
+                'symbol': symbol.upper(),
+                'error': error_msg,
+                'errors': [str(e)]
+            }
+    
+    def _fetch_income_statement(
+        self,
+        ticker: yf.Ticker,
+        period: str,
+        limit: Optional[int],
+        errors: List[str]
+    ) -> List[Dict]:
+        """Fetch income statement data."""
+        try:
+            print(f"[DEBUG] Fetching income statement ({period})...")
+            df = ticker.financials if period == "annual" else ticker.quarterly_financials
+            print(f"[DEBUG] Income statement DataFrame shape: {df.shape if df is not None else 'None'}")
+            if df is not None and not df.empty:
+                print(f"[DEBUG] Income statement columns: {list(df.columns)[:5]}...")
+                print(f"[DEBUG] Income statement index (line items): {list(df.index)[:5]}...")
+            result = self._process_dataframe(df, limit)
+            print(f"[DEBUG] Income statement processed: {len(result)} records")
+            return result
+        except Exception as e:
+            error_msg = f"Income statement error: {str(e)}"
+            print(f"[DEBUG] {error_msg}")
+            errors.append(error_msg)
+            return []
+    
+    def _fetch_balance_sheet(
+        self,
+        ticker: yf.Ticker,
+        period: str,
+        limit: Optional[int],
+        errors: List[str]
+    ) -> List[Dict]:
+        """Fetch balance sheet data."""
+        try:
+            print(f"[DEBUG] Fetching balance sheet ({period})...")
+            df = ticker.balance_sheet if period == "annual" else ticker.quarterly_balance_sheet
+            print(f"[DEBUG] Balance sheet DataFrame shape: {df.shape if df is not None else 'None'}")
+            if df is not None and not df.empty:
+                print(f"[DEBUG] Balance sheet columns: {list(df.columns)[:5]}...")
+                print(f"[DEBUG] Balance sheet index (line items): {list(df.index)[:5]}...")
+            result = self._process_dataframe(df, limit)
+            print(f"[DEBUG] Balance sheet processed: {len(result)} records")
+            return result
+        except Exception as e:
+            error_msg = f"Balance sheet error: {str(e)}"
+            print(f"[DEBUG] {error_msg}")
+            errors.append(error_msg)
+            return []
+    
+    def _fetch_cash_flow(
+        self,
+        ticker: yf.Ticker,
+        period: str,
+        limit: Optional[int],
+        errors: List[str]
+    ) -> List[Dict]:
+        """Fetch cash flow statement data."""
+        try:
+            print(f"[DEBUG] Fetching cash flow ({period})...")
+            df = ticker.cashflow if period == "annual" else ticker.quarterly_cashflow
+            print(f"[DEBUG] Cash flow DataFrame shape: {df.shape if df is not None else 'None'}")
+            if df is not None and not df.empty:
+                print(f"[DEBUG] Cash flow columns: {list(df.columns)[:5]}...")
+                print(f"[DEBUG] Cash flow index (line items): {list(df.index)[:5]}...")
+            result = self._process_dataframe(df, limit)
+            print(f"[DEBUG] Cash flow processed: {len(result)} records")
+            return result
+        except Exception as e:
+            error_msg = f"Cash flow error: {str(e)}"
+            print(f"[DEBUG] {error_msg}")
+            errors.append(error_msg)
+            return []
+    
+    def _process_dataframe(
+        self,
+        df: pd.DataFrame,
+        limit: Optional[int] = None
+    ) -> List[Dict]:
+        """
+        Process a yfinance dataframe into a list of dictionaries.
+        
+        Args:
+            df: DataFrame from yfinance (columns are dates)
+            limit: Number of periods to return
+            
+        Returns:
+            List of dictionaries with period_end and financial line items
+        """
+        print(f"[DEBUG] Processing DataFrame...")
+        
+        if df is None or df.empty:
+            print("[DEBUG] DataFrame is None or empty, returning empty list")
+            return []
+        
+        try:
+            print(f"[DEBUG] Original DataFrame shape: {df.shape}")
+            
+            # Transpose: columns (dates) become rows
+            # Avoid fillna warning by transposing first, then handling NaN in the loop
+            df_transposed = df.T
+            
+            print(f"[DEBUG] Transposed DataFrame shape: {df_transposed.shape}")
+            
+            # Format index as dates
+            df_transposed.index = [
+                pd.to_datetime(idx).strftime("%Y-%m-%d") if not isinstance(idx, str) else idx 
+                for idx in df_transposed.index
+            ]
+            
+            print(f"[DEBUG] Date index after formatting: {list(df_transposed.index)}")
+            
+            # Convert to list of dicts
+            records = []
+            for i, (date_idx, row) in enumerate(df_transposed.iterrows()):
+                record = {"period_end": date_idx}
+                
+                for column_name in df_transposed.columns:
+                    value = row[column_name]
+                    try:
+                        # Convert to float if possible, None if NaN
+                        if pd.isna(value):
+                            record[column_name] = None
+                        else:
+                            record[column_name] = float(value)
+                    except:
+                        record[column_name] = value
+                
+                records.append(record)
+                
+                # Print first record as sample
+                if i == 0:
+                    print(f"[DEBUG] Sample record (first period):")
+                    print(f"  Period: {record['period_end']}")
+                    print(f"  Number of fields: {len(record)}")
+                    sample_keys = list(record.keys())[:10]
+                    print(f"  Sample keys: {sample_keys}")
+                    for key in sample_keys[:3]:
+                        print(f"    {key}: {record[key]}")
+            
+            # Apply limit if specified
+            final_records = records[:limit] if limit else records
+            print(f"[DEBUG] Returning {len(final_records)} records (limit: {limit})")
+            
+            return final_records
+            
+        except Exception as e:
+            print(f"[DEBUG] Error in _process_dataframe: {str(e)}")
+            # Fallback: simple conversion
+            try:
+                fallback_records = df.reset_index().to_dict(orient="records")
+                print(f"[DEBUG] Using fallback method, returning {len(fallback_records)} records")
+                return fallback_records
+            except:
+                print("[DEBUG] Fallback also failed, returning empty list")
+                return []
+    
+    async def _arun(self, *args, **kwargs):
+        """Async version - not implemented, falls back to sync."""
+        return self._run(*args, **kwargs)
 
 
 # class CombinedFinancialStatementTool(BaseTool):
@@ -1059,6 +1343,7 @@ class GetStockData(BaseTool):
 search_company_info = SearchCompanyInfoTool()
 # get_usa_based_company_profile = CompanyProfileTool()
 get_stock_data = GetStockData()
+get_financial_statements = YFinanceFinancialStatementTool()
 # get_financial_statements = CombinedFinancialStatementTool()
 # get_currency_exchange_rates = CurrencyRateTool()
 # advanced_internet_search = AdvancedInternetSearchToolPerplexity()
@@ -1069,6 +1354,7 @@ get_stock_data = GetStockData()
 tool_list = [
     search_company_info,
     get_stock_data,
+    get_financial_statements,
     # get_financial_statements,
     # get_currency_exchange_rates,
     # advanced_internet_search,

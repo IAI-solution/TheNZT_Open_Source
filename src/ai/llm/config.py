@@ -66,7 +66,7 @@ class FinanceDataConfig:
 
 
 class ReportGenerationConfig:
-    MODEL = "azure/gpt-4.1-mini"
+    MODEL = "azure/gpt-4.1"
     # MODEL = "gemini/gemini-2.5-pro"
     ALT_MODEL="gemini/gemini-2.0-flash"
     # ALT_MODEL = "groq/llama-3.3-70b-versatile"
