@@ -132,6 +132,8 @@ This tool provides information of companies registered."""
         except Exception as e:
             error_msg = f"Error in getting company profile information: {str(e)}"
             return error_msg
+
+
 class GetStockData(BaseTool):
     name: str = "get_stock_data"
     description: str = """Use this tool to get real-time stock quote data and historical stock prices of companies.
