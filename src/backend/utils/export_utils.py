@@ -58,8 +58,8 @@ WKHTMLTOPDF_PATH_PDF = '/usr/bin/wkhtmltopdf'# Example: '/usr/local/bin/wkhtmlto
 PDFKIT_CONFIG = pdfkit.configuration(wkhtmltopdf=WKHTMLTOPDF_PATH_PDF) if os.path.exists(WKHTMLTOPDF_PATH_PDF) else None
 
 CURRENT_DIR = Path(__file__).resolve().parent
-KATEX_CSS_PATH = "static/katex.min.css"
-PYGMENTS_CSS_PATH = "static/pygments_style.css"
+KATEX_CSS_PATH = Path("src/backend/utils/static/katex.min.css")
+PYGMENTS_CSS_PATH = Path("src/backend/utils/static/pygments_style.css")
 
 
 def load_css_file(file_path: Path, description: str) -> str:
