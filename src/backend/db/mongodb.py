@@ -1238,7 +1238,7 @@ async def rename_session_title(user_id:str, session_id: str, new_title:str):
 
     return {"new_title": new_title}
     
-async def delete_session(session_id: str):
+async def delete_session(user_id: PydanticObjectId, session_id: str):
    
     try:        
         deletion_and_fetch_tasks = [
@@ -1397,7 +1397,7 @@ async def delete_user(user_id: str) -> Dict[str, Any]:
         
         if session_ids:
             # Create tasks for ALL sessions at once
-            session_tasks = [delete_session(session_id) for session_id in session_ids]
+            session_tasks = [delete_session(user_id, session_id) for session_id in session_ids]
             all_tasks.extend(session_tasks)
         
         # Step 3: Add user-specific data deletion tasks to the same batch
