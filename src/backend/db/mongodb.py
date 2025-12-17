@@ -1244,7 +1244,6 @@ async def delete_session(user_id: PydanticObjectId, session_id: str):
         deletion_and_fetch_tasks = [
             MessageOutput.find(MessageOutput.session_id == session_id).delete(),
             MessageLog.find(MessageLog.session_id == session_id).delete(),
-            # GraphLog.find(GraphLog.session_id == session_id).delete(),
             MapData.find(MapData.session_id == session_id).delete(),
             SessionLog.find(SessionLog.session_id == session_id).delete(),
             SessionHistory.find(SessionHistory.session_id == session_id).delete(),
@@ -1255,8 +1254,8 @@ async def delete_session(user_id: PydanticObjectId, session_id: str):
         results = await asyncio.gather(*deletion_and_fetch_tasks, return_exceptions=True)
         print("Operation stop")
         # Check if session existed (if all deletions returned 0, session didn't exist)
-        deletion_results = results[:6]  # First 7 are deletions
-        message_outputs = results[6]    # Last one is message_outputs
+        deletion_results = results[:5]  # First 7 are deletions
+        message_outputs = results[5]    # Last one is message_outputs
         
         total_deleted = sum(
             getattr(result, 'deleted_count', 0) 
