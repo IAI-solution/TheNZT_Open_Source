@@ -6,6 +6,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.types import Command
 from langgraph.graph import END
 import json
+import re
 from src.ai.llm.model import get_llm, get_llm_alt
 from src.ai.llm.config import IntentDetectionConfig
 from time import sleep
@@ -69,8 +70,39 @@ class IntentDetector(BaseAgent):
                 print(f"Error occurred in fallback model: {str(e)}")
                 raise e
 
-        response = json.loads(output.content)
-        print(f"response from llm (json.loads(output.content)) = \n{response}\n")
+        # Robust JSON extraction
+        response_content = output.content
+        # Remove thinking section if present
+        response_without_thinking = re.sub(r'<think>.*?</think>', '', response_content, flags=re.DOTALL)
+        
+        # Extract JSON content from markdown blocks if present
+        json_match = re.search(r'```json\s*(.*?)\s*```', response_without_thinking, re.DOTALL)
+        if json_match:
+            json_content = json_match.group(1).strip()
+        else:
+            # Try to find the first { and last }
+            start = response_without_thinking.find('{')
+            end = response_without_thinking.rfind('}')
+            if start != -1 and end != -1:
+                json_content = response_without_thinking[start:end+1]
+            else:
+                json_content = response_without_thinking
+
+        try:
+            response = json.loads(json_content)
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing error in IntentDetector: {str(e)}")
+            print("Raw content:", response_content)
+            # Default fallback response
+            response = {
+                "query_intent": ["general"],
+                "query_tag": "general",
+                "formatted_user_query": state['user_query'],
+                "response_to_user": None,
+                "reject_query": False
+            }
+
+        print(f"response from llm (parsed) = \n{response}\n")
 
         if not response.get('reject_query', False):
             if not response.get('response_to_user'):

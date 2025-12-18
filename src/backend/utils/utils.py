@@ -15,6 +15,7 @@ import src.backend.db.mongodb as mongodb
 import threading
 import ipinfo
 import ipaddress
+import logging
 from zoneinfo import ZoneInfo
 # from azure.storage.blob import ContentSettings, BlobServiceClient
 # import plotly.graph_objects as go
@@ -782,13 +783,56 @@ async def format_intent_detector_update(agent_name, stream_mode, update):
                 value = update.get(message_container_key, {})
                 
                 if value:
-                    if value.get('messages'):
-                        msg = value['messages']
-                        # if isinstance(msg, AIMessage):
-                            # token_metrics = get_token_usage_data(msg)
-                            # response_list.append({'token_usage': token_metrics})
+                    # messages can be a list or a single message object. Normalize to a single message `msg`.
+                    msg = None
+                    messages = value.get('messages')
+                    if isinstance(messages, list) and messages:
+                        # pick the last message that has `.content` attribute
+                        for m in reversed(messages):
+                            if hasattr(m, 'content'):
+                                msg = m
+                                break
+                        if not msg:
+                            msg = messages[-1]
+                    elif hasattr(messages, 'content'):
+                        msg = messages
 
-                    markdown_output += pretty_format(json.loads(msg.content))
+                    # Safely parse content: it may be empty, plain text, or JSON.
+                    parsed_obj = None
+                    content_str = ''
+                    if msg is not None:
+                        content_str = getattr(msg, 'content', '') or ''
+                        if isinstance(content_str, (dict, list)):
+                            parsed_obj = content_str
+                        else:
+                            content_str = str(content_str)
+                            content_str_stripped = content_str.strip()
+                            if content_str_stripped:
+                                try:
+                                    # only attempt json.loads when it looks like JSON
+                                    if content_str_stripped[0] in ('{', '['):
+                                        parsed_obj = json.loads(content_str)
+                                    else:
+                                        # Not JSON — keep raw text
+                                        parsed_obj = content_str
+                                except Exception:
+                                    # fallback: keep raw content and log a brief warning
+                                    print(f"Warning: Query Intent Detector content is not valid JSON. Using raw content. Content snippet: {repr(content_str)[:500]}")
+                                    parsed_obj = content_str
+                            else:
+                                parsed_obj = None
+                    else:
+                        parsed_obj = None
+
+                    # Use pretty_format on either parsed object or on the raw content string
+                    if parsed_obj is not None:
+                        markdown_output += pretty_format(parsed_obj)
+                    else:
+                        # nothing useful to show
+                        markdown_output += ""
+
+                    # Ensure msg_id exists later when adding to response_list
+                    msg_id = getattr(msg, 'id', get_unique_response_id())
                     
                     if value.get('progress') or value.get('progress_bar'):
                         progress_data = {}
@@ -894,17 +938,128 @@ async def format_executor_agent_update(agent_name, stream_mode, update):
                         'progress_bar': value['progress_bar']
                     })
                 
+                # task_list may come as part of the update dict or embedded in the last message content.
+                extracted_task_list = None
                 if value.get('task_list'):
-                    task_list = value['task_list']
+                    extracted_task_list = value['task_list']
+                else:
+                    # try to extract from messages: look for AIMessage content that contains a task list
+                    if isinstance(value.get('messages'), list) and value.get('messages'):
+                        for m in reversed(value.get('messages')):
+                            content = None
+                            if isinstance(m, AIMessage):
+                                content = getattr(m, 'content', '')
+                            elif isinstance(m, dict) and 'content' in m:
+                                content = m.get('content')
+                            elif isinstance(m, (str, bytes)):
+                                content = str(m)
 
+                            if content:
+                                content_str = str(content).strip()
+                                # try JSON first
+                                try:
+                                    if content_str and content_str[0] in ('{', '['):
+                                        parsed = json.loads(content_str)
+                                        if isinstance(parsed, dict) and parsed.get('task_list'):
+                                            extracted_task_list = parsed.get('task_list')
+                                            break
+                                        elif isinstance(parsed, list):
+                                            extracted_task_list = parsed
+                                            break
+                                except Exception:
+                                    # fallback: parse numbered/plain task blocks
+                                    try:
+                                        lines = content_str.splitlines()
+                                        blocks = []
+                                        curr = []
+                                        for line in lines:
+                                            if re.match(r'^\s*\d+\.|^\s*\d+\.', line):
+                                                if curr:
+                                                    blocks.append(curr)
+                                                    curr = []
+                                                curr.append(line)
+                                            else:
+                                                if line.strip() == '' and curr:
+                                                    blocks.append(curr)
+                                                    curr = []
+                                                elif curr or line.strip():
+                                                    curr.append(line)
+                                        if curr:
+                                            blocks.append(curr)
+
+                                        tasks = []
+                                        for block in blocks:
+                                            text = ' '.join([l.strip() for l in block])
+                                            fields = {}
+                                            for m2 in re.finditer(r"(task_name|task name|task_\d+|agent|agent_name|agent task|agent_task|instruction|instructions|expected_output|required_context)\s*[:\-]\s*(.*?)(?=\s+\b(task_name|task name|task_\d+|agent|agent_name|agent task|agent_task|instruction|instructions|expected_output|required_context)\b\s*[:\-]|$)", text, flags=re.I):
+                                                k = m2.group(1).strip().lower()
+                                                v = m2.group(2).strip()
+                                                fields[k] = v
+
+                                            if not fields:
+                                                tasks.append({'task_name': None, 'agent_name': None, 'agent_task': ' '.join([l.strip() for l in block]), 'instructions': '', 'expected_output': ''})
+                                                continue
+
+                                            task = {
+                                                'task_name': fields.get('task_name') or fields.get('task name') or None,
+                                                'agent_name': fields.get('agent_name') or fields.get('agent') or None,
+                                                'agent_task': fields.get('agent task') or fields.get('agent_task') or fields.get('instructions') or fields.get('instruction') or '',
+                                                'instructions': fields.get('instructions') or fields.get('instruction') or '',
+                                                'expected_output': fields.get('expected_output') or '',
+                                            }
+                                            tasks.append(task)
+
+                                        if tasks:
+                                            extracted_task_list = tasks
+                                            break
+                                    except Exception:
+                                        continue
+
+                if extracted_task_list:
+                    task_list = extracted_task_list
+
+                    # Validate parsed tasks: require at minimum an agent and a task name.
+                    invalid_count = 0
                     for subtask in task_list:
-                        markdown_output += f"*{subtask['task_name']}*\n"
-                        markdown_output += f"- Agent: {subtask['agent_name']}\n"
-                        markdown_output += f"- Task: {subtask['agent_task']}\n"
-                        markdown_output += f"- Instructions: {subtask['instructions']}\n"
-                        markdown_output += f"- Expected Output: {subtask['expected_output']}\n"
-                        if subtask['required_context']:
-                            markdown_output += f"- Required Context: {', '.join(f'`{item}`' for item in subtask['required_context'])}\n"
+                        if not (subtask.get('task_name') or subtask.get('task')) or not (subtask.get('agent_name') or subtask.get('agent')):
+                            invalid_count += 1
+
+                    if invalid_count == len(task_list):
+                        # Parser produced only invalid/incomplete tasks. Surface an explicit format error
+                        logging.warning("ExecutorAgent: parsed task_list seems invalid — %s/%s tasks missing required fields. Returning format_error.", invalid_count, len(task_list))
+                        response_list.append({'type': 'format_error', 'agent_name': agent_name, 'title': 'Executor Agent: could not parse structured task list from model output.', 'content': 'The executor agent returned an unstructured or incomplete task list. Please re-run or ensure the planner outputs structured JSON with `task_list`.', 'id': get_unique_response_id()})
+                        return response_list
+
+                    # Otherwise, render the tasks we could parse, but mark incomplete fields clearly.
+                    for subtask in task_list:
+                        task_name = subtask.get('task_name') or subtask.get('task') or 'Unnamed Task'
+                        agent_name_val = subtask.get('agent_name') or subtask.get('agent') or 'Unknown Agent'
+                        agent_task_val = subtask.get('agent_task') or subtask.get('task_description') or ''
+                        instructions_val = subtask.get('instructions') or subtask.get('instruction') or ''
+                        expected_output_val = subtask.get('expected_output') or ''
+
+                        markdown_output += f"*{task_name}*\n"
+                        markdown_output += f"- Agent: {agent_name_val}\n"
+                        markdown_output += f"- Task: {agent_task_val}\n"
+                        markdown_output += f"- Instructions: {instructions_val}\n"
+                        markdown_output += f"- Expected Output: {expected_output_val}\n"
+
+                        required_ctx = subtask.get('required_context') or subtask.get('required_context_list') or None
+                        if required_ctx:
+                            try:
+                                ctx_list = list(required_ctx) if not isinstance(required_ctx, str) else [required_ctx]
+                                markdown_output += f"- Required Context: {', '.join(f'`{item}`' for item in ctx_list)}\n"
+                            except Exception:
+                                markdown_output += f"- Required Context: `{required_ctx}`\n"
+
+                        # mark if some key fields were missing for this subtask
+                        missing = []
+                        if not (subtask.get('task_name') or subtask.get('task')):
+                            missing.append('task_name')
+                        if not (subtask.get('agent_name') or subtask.get('agent')):
+                            missing.append('agent_name')
+                        if missing:
+                            markdown_output += f"- _Parsing note_: missing fields: {', '.join(missing)}\n"
 
                         markdown_output += "\n"
 
@@ -1132,54 +1287,141 @@ async def format_langgraph_message(event):
     TOOL_CALLING_AGENTS = ["Map Agent"]
     if agent_id:
         agent_name = agent_id[0].split(':')[0]
-        if agent_name in TOOL_CALLING_AGENTS:
-            return await format_tool_calling_agent_update(agent_name, stream_mode, update)
-        elif agent_name == "Coding Agent":
-            return await format_coding_agent_update(agent_name, stream_mode, update)
-        elif agent_name == "Web Search Agent":
-            return await format_web_search_agent_update(agent_name, stream_mode, update)
-        elif agent_name == "Social Media Scrape Agent":
-            return await format_social_media_agent_update(agent_name, stream_mode, update)
-        elif agent_name == "Finance Data Agent":
-            return await format_finance_data_agent_update(agent_name, stream_mode, update)
-        elif agent_name == 'Query Intent Detector':
-            return await format_intent_detector_update(agent_name, stream_mode, update)
-        elif agent_name == 'Planner Agent':
-            return await format_planner_agent_update(agent_name, stream_mode, update)
-        elif agent_name == 'Executor Agent':
-            return await format_executor_agent_update(agent_name, stream_mode, update)
-        elif agent_name == 'Task Router':
-            return await format_task_router_update(agent_name, stream_mode, update)
-        elif agent_name == 'Manager Agent':
-            return await format_manager_agent_update(agent_name, stream_mode, update)
-        elif agent_name == 'Response Generator Agent':
-            return await format_response_generator_agent_update(agent_name, stream_mode, update)
-        elif agent_name == 'Validation Agent':
-            return await format_validation_agent_update(agent_name, stream_mode, update)
-        elif agent_name == 'DB Search Agent':
-            return await format_db_search_agent_aimessage(agent_name, stream_mode, update)
-        else:
-            return await format_non_tool_calling_agent_update(agent_name, stream_mode, update)
-    else:
-        for key in update.keys():
-            if key == 'Query Intent Detector':
-                return await format_intent_detector_update(key, stream_mode, update)
-            elif key == 'Planner Agent':
-                return await format_planner_agent_update(key, stream_mode, update)
-            elif key == 'Executor Agent':
-                return await format_executor_agent_update(key, stream_mode, update)
-            elif key == 'Task Router':
-                return await format_task_router_update(key, stream_mode, update)
-            elif key == 'Manager Agent':
-                return await format_manager_agent_update(key, stream_mode, update)
-            elif key == 'Response Generator Agent':
-                return await format_response_generator_agent_update(key, stream_mode, update)
-            elif key == 'Validation Agent':
-                return await format_validation_agent_update(key, stream_mode, update)
-            elif key == "Map Agent":
-                return await format_map_agent_update_struct_response(key, stream_mode, update)
+        # Call the appropriate formatter and ensure we always return a list-like iterable.
+        try:
+            if agent_name in TOOL_CALLING_AGENTS:
+                res = await format_tool_calling_agent_update(agent_name, stream_mode, update)
+            elif agent_name == "Coding Agent":
+                res = await format_coding_agent_update(agent_name, stream_mode, update)
+            elif agent_name == "Web Search Agent":
+                res = await format_web_search_agent_update(agent_name, stream_mode, update)
+            elif agent_name == "Social Media Scrape Agent":
+                res = await format_social_media_agent_update(agent_name, stream_mode, update)
+            elif agent_name == "Finance Data Agent":
+                res = await format_finance_data_agent_update(agent_name, stream_mode, update)
+            elif agent_name == 'Query Intent Detector':
+                res = await format_intent_detector_update(agent_name, stream_mode, update)
+            elif agent_name == 'Planner Agent':
+                res = await format_planner_agent_update(agent_name, stream_mode, update)
+            elif agent_name == 'Executor Agent':
+                res = await format_executor_agent_update(agent_name, stream_mode, update)
+            elif agent_name == 'Task Router':
+                res = await format_task_router_update(agent_name, stream_mode, update)
+            elif agent_name == 'Manager Agent':
+                res = await format_manager_agent_update(agent_name, stream_mode, update)
+            elif agent_name == 'Response Generator Agent':
+                res = await format_response_generator_agent_update(agent_name, stream_mode, update)
+            elif agent_name == 'Validation Agent':
+                res = await format_validation_agent_update(agent_name, stream_mode, update)
+            elif agent_name == 'DB Search Agent':
+                res = await format_db_search_agent_aimessage(agent_name, stream_mode, update)
             else:
-                return await format_non_tool_calling_agent_update(key, stream_mode, update)
+                res = await format_non_tool_calling_agent_update(agent_name, stream_mode, update)
+
+            # coerce res into a list to satisfy callers that expect an iterable
+            def _coerce_to_list(x):
+                from collections.abc import Iterable
+                if x is None:
+                    return []
+                if isinstance(x, list):
+                    return x
+                if isinstance(x, (tuple, set)):
+                    return list(x)
+                if isinstance(x, dict):
+                    return [x]
+                # strings are iterable but shouldn't be expanded
+                if isinstance(x, str):
+                    return [x]
+                if isinstance(x, Iterable):
+                    try:
+                        return list(x)
+                    except Exception:
+                        return [x]
+                return [x]
+
+            coerced = _coerce_to_list(res)
+            # remove any None entries that could break downstream extend()
+            try:
+                coerced = [c for c in coerced if c is not None]
+            except Exception:
+                # if coercion produced a non-iterable unexpectedly, wrap in list
+                coerced = [coerced]
+
+            # debug log truncated snapshot to help diagnose persistent None issues
+            try:
+                logging.debug("Formatter %s produced res=%s coerced=%s", agent_name, repr(res)[:500], repr(coerced)[:500])
+            except Exception:
+                logging.debug("Formatter %s produced non-serializable output", agent_name)
+
+            if not coerced:
+                logging.warning("Formatter for %s returned empty result after coercion. Returning explicit format_error to prevent LangGraph crash.", agent_name)
+                return [{'type': 'format_error', 'agent_name': agent_name, 'title': 'Formatter returned empty result', 'content': 'Formatter produced no usable output after parsing.'}]
+
+            return coerced
+        except Exception as e:
+            logging.exception("Error formatting message for agent %s: %s", agent_name, str(e))
+            return []
+    else:
+            for key in update.keys():
+                try:
+                    if key == 'Query Intent Detector':
+                        res = await format_intent_detector_update(key, stream_mode, update)
+                    elif key == 'Planner Agent':
+                        res = await format_planner_agent_update(key, stream_mode, update)
+                    elif key == 'Executor Agent':
+                        res = await format_executor_agent_update(key, stream_mode, update)
+                    elif key == 'Task Router':
+                        res = await format_task_router_update(key, stream_mode, update)
+                    elif key == 'Manager Agent':
+                        res = await format_manager_agent_update(key, stream_mode, update)
+                    elif key == 'Response Generator Agent':
+                        res = await format_response_generator_agent_update(key, stream_mode, update)
+                    elif key == 'Validation Agent':
+                        res = await format_validation_agent_update(key, stream_mode, update)
+                    elif key == "Map Agent":
+                        res = await format_map_agent_update_struct_response(key, stream_mode, update)
+                    else:
+                        res = await format_non_tool_calling_agent_update(key, stream_mode, update)
+
+                    # coerce result into a list for consistency
+                    def _coerce_to_list_key(x):
+                        from collections.abc import Iterable
+                        if x is None:
+                            return []
+                        if isinstance(x, list):
+                            return x
+                        if isinstance(x, (tuple, set)):
+                            return list(x)
+                        if isinstance(x, dict):
+                            return [x]
+                        if isinstance(x, str):
+                            return [x]
+                        if isinstance(x, Iterable):
+                            try:
+                                return list(x)
+                            except Exception:
+                                return [x]
+                        return [x]
+
+                    coerced = _coerce_to_list_key(res)
+                    try:
+                        coerced = [c for c in coerced if c is not None]
+                    except Exception:
+                        coerced = [coerced]
+
+                    try:
+                        logging.debug("Formatter for key %s produced res=%s coerced=%s", key, repr(res)[:500], repr(coerced)[:500])
+                    except Exception:
+                        logging.debug("Formatter for key %s produced non-serializable output", key)
+
+                    if not coerced:
+                        logging.warning("Formatter for key %s returned empty result after coercion. Returning explicit format_error.", key)
+                        return [{'type': 'format_error', 'agent_name': key, 'title': 'Formatter returned empty result', 'content': 'Formatter produced no usable output after parsing.'}]
+
+                    return coerced
+                except Exception:
+                    logging.exception("Error formatting langgraph message for key %s", key)
+                    return []
 
 
 async def format_fast_agent_update(stream_mode, update):
