@@ -22,7 +22,8 @@ from zoneinfo import ZoneInfo
 import matplotlib.pyplot as plt
 from dotenv import load_dotenv
 from src.ai.llm.model import get_llm
-from src.ai.llm.config import CountUsageMetricsPricingConfig
+#from src.ai.llm.config import CountUsageMetricsPricingConfig
+from src.ai.llm.config_openai import  CountUsageMetricsPricingConfig
 
 cmp = CountUsageMetricsPricingConfig()
 

@@ -5,7 +5,8 @@ from typing import Optional, List, Literal, Tuple, Dict, Any
 import json
 import asyncio
 from src.ai.llm.model import get_llm
-from src.ai.llm.config import GetRelatedQueriesConfig
+# #from src.ai.llm.config import GetRelatedQueriesConfig
+from src.ai.llm.config_openai import GetRelatedQueriesConfig
 load_dotenv()
 
 grqc = GetRelatedQueriesConfig()
@@ -86,7 +87,8 @@ if __name__ == "__main__":
 # import json
 # import asyncio
 # from src.ai.llm.model import get_llm
-# from src.ai.llm.config import GetRelatedQueriesConfig
+# # #from src.ai.llm.config import GetRelatedQueriesConfig
+#from src.ai.llm.config_openai import GetRelatedQueriesConfig
 # load_dotenv()
 
 # grqc = GetRelatedQueriesConfig()

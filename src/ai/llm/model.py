@@ -86,14 +86,18 @@ import litellm
 def get_llm(model_name: str, temperature: float = None, max_tokens: int = None, agent_name: str = None):
     model_kwargs = {}
     # Check if using Ollama models via OpenAI provider
-    if ("gpt-oss" in model_name or "kimi" in model_name or "qwen" in model_name or "deepseek" in model_name or "minimax" in model_name) and os.environ.get("OLLAMA_API_KEY"):
+    is_ollama_proxy = ("gpt-oss" in model_name or "kimi" in model_name or "qwen" in model_name or "deepseek" in model_name or "minimax" in model_name) and os.environ.get("OLLAMA_API_KEY")
+    
+    if is_ollama_proxy:
         model_kwargs["api_base"] = "https://ollama.com/v1"
         model_kwargs["api_key"] = os.environ["OLLAMA_API_KEY"]
     
     # Prepare metadata for usage monitoring
     if agent_name:
         model_kwargs["metadata"] = {"agent_name": agent_name}
-        model_kwargs["agent_name"] = agent_name # Fallback: pass directly in model_kwargs
+        # Only pass agent_name as a top-level arg if it's an Ollama proxy model that expects it
+        if is_ollama_proxy:
+            model_kwargs["agent_name"] = agent_name
         
     # Pass model_kwargs explicitly so ChatLiteLLM forwards them to litellm
     # Filter out metadata from top-level kwargs to avoid "multiple values" TypeError if ChatLiteLLM accepts it as named arg
@@ -117,13 +121,17 @@ def get_llm_groq(model_name: str , temperature: float = None, top_p: float = Non
 def get_llm_alt(model_name: str, temperature: float = None, max_tokens: int = None, agent_name: str = None):
     model_kwargs = {}
     # Check if using Ollama models via OpenAI provider
-    if ("gpt-oss" in model_name or "kimi" in model_name or "qwen" in model_name or "deepseek" in model_name or "minimax" in model_name) and os.environ.get("OLLAMA_API_KEY"):
+    is_ollama_proxy = ("gpt-oss" in model_name or "kimi" in model_name or "qwen" in model_name or "deepseek" in model_name or "minimax" in model_name) and os.environ.get("OLLAMA_API_KEY")
+    
+    if is_ollama_proxy:
         model_kwargs["api_base"] = "https://ollama.com/v1"
         model_kwargs["api_key"] = os.environ["OLLAMA_API_KEY"]
         
     if agent_name:
         model_kwargs["metadata"] = {"agent_name": agent_name}
-        model_kwargs["agent_name"] = agent_name # Fallback
+        # Only pass agent_name as a top-level arg if it's an Ollama proxy model that expects it
+        if is_ollama_proxy:
+            model_kwargs["agent_name"] = agent_name
 
     top_level_kwargs = {k: v for k, v in model_kwargs.items() if k != 'metadata'}
     

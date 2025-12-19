@@ -8,7 +8,8 @@ from langgraph.graph import END
 import json
 import re
 from src.ai.llm.model import get_llm, get_llm_alt
-from src.ai.llm.config import IntentDetectionConfig
+#from src.ai.llm.config import IntentDetectionConfig
+from src.ai.llm.config_openai import  IntentDetectionConfig
 from time import sleep
 
 

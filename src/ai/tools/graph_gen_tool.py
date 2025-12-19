@@ -13,7 +13,8 @@ from src.ai.tools.graph_gen_tool_system_prompt import SYSTEM_PROMPT_STRUCT_OUTPU
 # from langchain_community.chat_models import ChatLiteLLM
 from dotenv import load_dotenv
 from src.ai.llm.model import get_llm
-from src.ai.llm.config import GraphGenerationConfig
+#from src.ai.llm.config import GraphGenerationConfig
+from src.ai.llm.config_openai import  GraphGenerationConfig
 
 load_dotenv()
 

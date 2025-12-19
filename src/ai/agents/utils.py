@@ -7,7 +7,8 @@ from src.ai.ai_schemas.structured_responses import RelatedQueries
 import json
 import re
 from dotenv import load_dotenv
-from src.ai.llm.config import GenerateSessionTitleConfig, GetRelatedQueriesConfig
+#from src.ai.llm.config import GenerateSessionTitleConfig, GetRelatedQueriesConfig
+from src.ai.llm.config_openai import  GenerateSessionTitleConfig, GetRelatedQueriesConfig
 
 load_dotenv()
 
@@ -365,7 +366,8 @@ Example Response Titles: "Latest Tech Trends", "Healthy Eating Tips", "Traveling
 # from src.ai.ai_schemas.structured_responses import RelatedQueries
 # import json
 # from dotenv import load_dotenv
-# from src.ai.llm.config import GenerateSessionTitleConfig, GetRelatedQueriesConfig
+# # #from src.ai.llm.config import GenerateSessionTitleConfig, GetRelatedQueriesConfig
+from src.ai.llm.config_openai import  GenerateSessionTitleConfig, GetRelatedQueriesConfig
 
 # load_dotenv()
 

@@ -4,7 +4,8 @@ from typing import Dict, Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from .utils import get_context_messages_for_response
 from src.ai.llm.model import get_llm, get_llm_alt
-from src.ai.llm.config import ReportGenerationConfig
+#from src.ai.llm.config import ReportGenerationConfig
+from src.ai.llm.config_openai import  ReportGenerationConfig
 from src.ai.tools.graph_gen_tool import graph_tool_list
 from langgraph.prebuilt import create_react_agent
 from datetime import date

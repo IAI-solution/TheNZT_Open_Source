@@ -7,7 +7,8 @@ from langchain_core.messages import HumanMessage, SystemMessage
 import json
 import re
 from src.ai.llm.model import get_llm, get_llm_alt
-from src.ai.llm.config import PlannerConfig
+#from src.ai.llm.config import PlannerConfig
+from src.ai.llm.config_openai import  PlannerConfig
 import asyncio
 from time import sleep
 

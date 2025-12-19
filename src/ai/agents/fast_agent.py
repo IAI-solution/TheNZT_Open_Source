@@ -5,7 +5,8 @@ from typing import Dict, Any, Optional
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from langgraph.prebuilt import create_react_agent
 from src.ai.llm.model import get_llm, get_llm_alt
-from src.ai.llm.config import FastAgentConfig, CountUsageMetricsPricingConfig
+#from src.ai.llm.config import FastAgentConfig, CountUsageMetricsPricingConfig
+from src.ai.llm.config_openai import  FastAgentConfig, CountUsageMetricsPricingConfig
 from langgraph.types import Command
 from src.backend.utils.utils import get_date_time, format_fast_agent_update, PRICING, get_user_metadata
 import asyncio

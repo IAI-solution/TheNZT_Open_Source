@@ -7,7 +7,8 @@ from langgraph.prebuilt import create_react_agent
 from .utils import get_context_messages
 from langgraph.prebuilt import create_react_agent
 from src.ai.llm.model import get_llm, get_llm_alt
-from src.ai.llm.config import FinanceDataConfig
+#from src.ai.llm.config import FinanceDataConfig
+from src.ai.llm.config_openai import  FinanceDataConfig
 from langgraph.types import Command
 from datetime import date
 from time import sleep

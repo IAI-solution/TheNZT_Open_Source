@@ -20,7 +20,8 @@ from langchain_tavily import TavilySearch
 from src.backend.utils.utils import get_second_level_domain, get_favicon_link
 import src.backend.db.mongodb as mongodb
 from langgraph.config import get_stream_writer
-from src.ai.llm.config import WebSearchConfig
+#from src.ai.llm.config import WebSearchConfig
+from src.ai.llm.config_openai import  WebSearchConfig
 
 
 # serper_api_key = os.environ.get("GOOGLE_SERPER_API_KEY")
