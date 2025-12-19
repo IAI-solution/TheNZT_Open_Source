@@ -5,7 +5,7 @@ from src.ai.tools.finance_data_tools import get_stock_data
 # 2. Import your LLM and configuration
 from src.ai.llm.model import get_llm
 #from src.ai.llm.config import FastAgentConfig
-from src.ai.llm.config_openai import  FastAgentConfig
+from src.ai.llm.config import  FastAgentConfig
 
 # 3. Import the graph builder from the new node file
 from .chatbot_node import create_agent_graph

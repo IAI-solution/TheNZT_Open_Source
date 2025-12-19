@@ -7,7 +7,7 @@ from .financial_tool import fetch_crypto_price_history, fetch_stock_price_histor
 from .tavily_search import search_financial_web_content
 from src.ai.llm.model import get_llm
 #from src.ai.llm.config import FastAgentConfig
-from src.ai.llm.config_openai import  FastAgentConfig
+from src.ai.llm.config import  FastAgentConfig
 import asyncio
 import calendar
 #new imports

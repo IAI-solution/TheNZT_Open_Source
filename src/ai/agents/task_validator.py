@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 import json
 from src.ai.llm.model import get_llm, get_llm_alt
 #from src.ai.llm.config import TaskValidationConfig
-from src.ai.llm.config_openai import  TaskValidationConfig
+from src.ai.llm.config import  TaskValidationConfig
 
 tvc = TaskValidationConfig()
 

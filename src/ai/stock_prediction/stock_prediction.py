@@ -18,7 +18,7 @@ from src.ai.stock_prediction.stock_prediction_functions import get_rating_stock_
 from src.ai.stock_prediction.stock_prediction_functions import sarimax_predict
 from src.ai.llm.model import get_llm
 #from src.ai.llm.config import StockPredictionConfig
-from src.ai.llm.config_openai import  StockPredictionConfig
+from src.ai.llm.config import  StockPredictionConfig
 
 load_dotenv()
 FMP_API_KEY = os.getenv("FM_API_KEY")

@@ -5,7 +5,7 @@ from typing import Dict, Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from src.ai.llm.model import get_llm, get_llm_alt
 #from src.ai.llm.config import ExecutorConfig
-from src.ai.llm.config_openai import  ExecutorConfig
+from src.ai.llm.config import  ExecutorConfig
 import json
 from time import sleep
 import re

@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, Base
 import json
 from src.ai.llm.model import get_llm, get_llm_groq
 #from src.ai.llm.config import ManagerConfig
-from src.ai.llm.config_openai import  ManagerConfig
+from src.ai.llm.config import  ManagerConfig
 from langgraph.types import Command
 from langgraph.graph import END
 import re
