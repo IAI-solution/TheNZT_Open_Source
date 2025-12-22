@@ -59,6 +59,8 @@ gemini_api_key = env_vars.get('GEMINI_API_KEY')
 groq_api_key = env_vars.get('GROQ_API_KEY')
 ollama_api_key = env_vars.get('OLLAMA_API_KEY')
 ollama_api_base = env_vars.get('OLLAMA_API_BASE')
+azure_api_key = env_vars.get('AZURE_API_KEY')
+azure_api_base = env_vars.get('AZURE_API_BASE')
 
 if openai_api_key and not os.getenv("OPENAI_API_KEY"):
     print('getting api key from env')
@@ -75,6 +77,12 @@ if ollama_api_key and not os.getenv("OLLAMA_API_KEY"):
 if ollama_api_base and not os.getenv("OLLAMA_API_BASE"):
     print('getting api base from env')
     os.environ["OLLAMA_API_BASE"] = ollama_api_base
+if azure_api_key and not os.getenv("AZURE_API_KEY"):
+    print('getting azure api key from env')
+    os.environ["AZURE_API_KEY"] = azure_api_key
+if azure_api_base and not os.getenv("AZURE_API_BASE"):
+    print('getting azure api base from env')
+    os.environ["AZURE_API_BASE"] = azure_api_base
 
 
 import litellm
