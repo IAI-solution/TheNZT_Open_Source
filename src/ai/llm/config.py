@@ -19,6 +19,9 @@ if llm_provider == "openai":
 elif llm_provider == "ollama":
     print(f"Loading Ollama Configuration (Provider: {llm_provider})")
     from .config_ollama import *
+elif llm_provider == "azure":
+    print(f"Loading Azure Configuration (Provider: {llm_provider})")
+    from .config_azure import *
 elif openai_api_key:
     print("Loading OpenAI Configuration (Auto-detected API Key)")
     from .config_openai import *
