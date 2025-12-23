@@ -1,6 +1,6 @@
 class FastAgentConfig:
     MODEL = "openai/minimax-m2:cloud"
-    ALT_MODEL = "openai/gpt-oss:20b-cloud"
+    ALT_MODEL = "openai/nemotron-3-nano:30b-cloud"
     TEMPERATURE = 0.15
     ALT_TEMPERATURE = 0.4
     MAX_TOKENS = 6000
@@ -8,7 +8,7 @@ class FastAgentConfig:
 
 
 class IntentDetectionConfig:
-    MODEL = "openai/gpt-oss:20b-cloud"
+    MODEL = "openai/nemotron-3-nano:30b-cloud"
     ALT_MODEL = "openai/gpt-oss:120b"
     TEMPERATURE = 0.3
     ALT_TEMPERATURE = 0.4
@@ -18,7 +18,7 @@ class IntentDetectionConfig:
 
 class PlannerConfig:
     MODEL = "openai/kimi-k2:1t"
-    ALT_MODEL = "openai/gpt-oss:20b-cloud"
+    ALT_MODEL = "openai/nemotron-3-nano:30b-cloud"
     TEMPERATURE = 0.0
     ALT_TEMPERATURE = 0.0
     MAX_TOKENS = None
@@ -29,7 +29,7 @@ class ExecutorConfig:
     # Gemini primary, Groq 32k as ALT for very long execution contexts
     # MODEL = "groq/openai/gpt-oss-120b" # "gemini/gemini-2.5-flash"
     MODEL = "openai/kimi-k2:1t"
-    ALT_MODEL = "openai/gpt-oss:20b-cloud"
+    ALT_MODEL = "openai/nemotron-3-nano:30b-cloud"
     TEMPERATURE = 0.1
     ALT_TEMPERATURE = 0.1
     MAX_TOKENS = 4000
@@ -38,7 +38,7 @@ class ExecutorConfig:
 
 class ManagerConfig:
     MODEL = "openai/kimi-k2:1t"
-    ALT_MODEL = "openai/gpt-oss:20b-cloud"
+    ALT_MODEL = "openai/nemotron-3-nano:30b-cloud"
     TEMPERATURE = 0.6
     ALT_TEMPERATURE = 0.6
     ALT_TOP_P = 0.95
@@ -48,7 +48,7 @@ class ManagerConfig:
 
 
 class WebSearchConfig:
-    MODEL = "openai/gpt-oss:20b-cloud"
+    MODEL = "openai/nemotron-3-nano:30b-cloud"
     ALT_MODEL = "openai/gpt-oss:120b"
     TEMPERATURE = 0.1
     ALT_TEMPERATURE = 0.1
@@ -57,7 +57,7 @@ class WebSearchConfig:
 
 
 class FinanceDataConfig:
-    MODEL = "openai/gpt-oss:20b-cloud"
+    MODEL = "openai/nemotron-3-nano:30b-cloud"
     ALT_MODEL = "openai/gpt-oss:120b"
     TEMPERATURE = 0.0
     ALT_TEMPERATURE = 0.1
@@ -68,7 +68,7 @@ class FinanceDataConfig:
 class ReportGenerationConfig:
     # MODEL = "gemini/gemini-2.5-pro"
     MODEL="openai/kimi-k2:1t"
-    ALT_MODEL="openai/gpt-oss:20b-cloud"
+    ALT_MODEL="openai/nemotron-3-nano:30b-cloud"
     # ALT_MODEL = "groq/llama-3.3-70b-versatile"
     TEMPERATURE = 0.1
     ALT_TEMPERATURE = 0.2
@@ -79,7 +79,7 @@ class ReportGenerationConfig:
 class TaskValidationConfig:
     # MODEL = "gemini/gemini-2.0-flash-lite"
     MODEL = "openai/kimi-k2:1t"
-    ALT_MODEL = "openai/gpt-oss:20b-cloud"
+    ALT_MODEL = "openai/nemotron-3-nano:30b-cloud"
     TEMPERATURE = 0.7
     ALT_TEMPERATURE = 0.7
     MAX_TOKENS = 1000
@@ -88,7 +88,7 @@ class TaskValidationConfig:
 
 class ValidationConfig:
     MODEL = "openai/kimi-k2:1t"
-    ALT_MODEL = "openai/gpt-oss:20b-cloud"
+    ALT_MODEL = "openai/nemotron-3-nano:30b-cloud"
     TEMPERATURE = 0.6
     ALT_TEMPERATURE = 0.6
     MAX_TOKENS = 2000
@@ -97,20 +97,20 @@ class ValidationConfig:
 
 class SummarizerConfig:
     MODEL = "openai/kimi-k2:1t"
-    ALT_MODEL = "openai/gpt-oss:20b-cloud"
+    ALT_MODEL = "openai/nemotron-3-nano:30b-cloud"
     TEMPERATURE = 0.3
     STREAM = True
     ALT_TEMPERATURE = 0.25
 
 
 class CountUsageMetricsPricingConfig:
-    MODEL = "openai/gpt-oss:20b-cloud"
+    MODEL = "openai/nemotron-3-nano:30b-cloud"
     ALT_MODEL = "openai/gpt-oss:120b"
 
 
 class GetRelatedQueriesConfig:
     MODEL = "openai/minimax-m2:cloud"
-    ALT_MODEL = "openai/gpt-oss:20b-cloud"
+    ALT_MODEL = "openai/nemotron-3-nano:30b-cloud"
     TEMPERATURE = 0.2
     ALT_TEMPERATURE = 0.4
     MAX_TOKENS = 800
@@ -120,7 +120,7 @@ class GetRelatedQueriesConfig:
 class GenerateSessionTitleConfig:
     # MODEL = "gemini/gemini-2.0-flash-lite"
     # MODEL = "groq/llama-3.3-70b-versatile"
-    MODEL = "openai/gpt-oss:20b-cloud"
+    MODEL = "openai/nemotron-3-nano:30b-cloud"
     ALT_MODEL = "openai/gpt-oss:120b"
     TEMPERATURE = 0.4
     ALT_TEMPERATURE = 0.4
@@ -131,7 +131,7 @@ class GenerateSessionTitleConfig:
 class StockPredictionConfig:
     # prefer Groq Qwen/Mixtral as ALT for long financial sequences; Gemini primary for deterministic behavior
     MODEL = "openai/kimi-k2:1t"
-    ALT_MODEL = "openai/gpt-oss:20b-cloud"
+    ALT_MODEL = "openai/nemotron-3-nano:30b-cloud"
     TEMPERATURE = 0.0
     ALT_TEMPERATURE = 0.0
     MAX_TOKENS = 1500
@@ -140,7 +140,7 @@ class StockPredictionConfig:
 
 class GraphGenerationConfig:
     # MODEL = "gemini/gemini-2.5-flash"
-    MODEL = "openai/gpt-oss:20b-cloud"
+    MODEL = "openai/nemotron-3-nano:30b-cloud"
     ALT_MODEL = "openai/gpt-oss:120b"
     # ALT_MODEL = "groq/llama-3.3-70b-versatile"
     TEMPERATURE = 0.1
