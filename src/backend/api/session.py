@@ -8,7 +8,7 @@ import time
 import base64
 import tempfile
 
-from src.ai.chart_bot.generate_related_qn import chart_bot_related_query
+from src.ai.chart_bot.chart_bot_utils.generate_related_qn import chart_bot_related_query
 from src.ai.stock_prediction.stock_prediction_functions import get_sentiment_rating, get_stock_history, sarimax_predict
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -16,7 +16,7 @@ from fastapi import APIRouter, Request, HTTPException, Query,status, BackgroundT
 from fastapi.responses import StreamingResponse,JSONResponse, StreamingResponse
 from typing import Optional, Dict, Any, AsyncGenerator
 from src.ai.ai_schemas.tool_structured_input import TickerSchema
-from src.ai.tools.finance_data_tools import get_stock_data
+from src.ai.tools.financial_tools import get_stock_data
 import src.backend.db.mongodb as mongodb
 from src.backend.utils.agent_comm import process_agent_input_functional
 from src.ai.agents.fast_agent import process_fast_agent_input
