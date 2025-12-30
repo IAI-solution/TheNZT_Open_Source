@@ -1,5 +1,5 @@
 from src.ai.tools.web_search_tools import advanced_internet_search
-from src.ai.tools.finance_data_tools import get_stock_data, search_company_info
+from src.ai.tools.financial_tools import get_stock_data, search_company_info
 # from src.ai.tools.internal_db_tools import search_qdrant_tool
 from typing import Dict, Any, Optional
 from langchain_core.messages import HumanMessage, SystemMessage, AIMessage

@@ -1,5 +1,5 @@
 from .base_agent import BaseAgent
-from src.ai.tools.finance_data_tools import tool_list
+from src.ai.tools.financial_tools import tool_list
 from src.ai.agent_prompts.finance_data_agent import SYSTEM_PROMPT
 from typing import Dict, Any, Literal
 from langchain_core.messages import HumanMessage, SystemMessage

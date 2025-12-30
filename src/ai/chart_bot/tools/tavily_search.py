@@ -25,7 +25,7 @@ async def search_financial_web_content(query: str) -> dict:
             query=query,
             max_results=5,
             include_raw_content=False,
-            search_depth="advanced", # Using 'advanced' for more comprehensive results
+            search_depth="basic", # Using 'advanced' for more comprehensive results
             include_answer=True, # Ask Tavily to provide a direct answer if possible
             topic="finance" # Focus the search on financial topics
         )
