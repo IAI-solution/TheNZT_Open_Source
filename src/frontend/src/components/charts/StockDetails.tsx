@@ -50,12 +50,12 @@ const StockDetails: React.FC<StockDetailsProps> = ({
         <span className="stock-detail-value">{marketCap ? formatNumber(marketCap) : '-'}</span>
       </div>
 
-      {exchange !== 'CRYPTO' && (
+      {/* {exchange !== 'CRYPTO' && (
         <div className="stock-detail-item">
           <span className="stock-detail-label">P/E Ratio</span>
           <span className="stock-detail-value">{peRatio ? peRatio.toFixed(2) : '-'}</span>
         </div>
-      )}
+      )} */}
 
       <div className="stock-detail-item">
         <span className="stock-detail-label">Volume</span>

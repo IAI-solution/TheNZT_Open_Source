@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Mail, Lock, Eye, EyeOff, Check } from 'lucide-react';
 import {
   Dialog,
@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { toast } from 'sonner';
@@ -38,7 +37,6 @@ interface ApiConfig {
 interface OtpPasswordResetDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  OTP?:string
 }
 
 // Dialog stages
@@ -58,11 +56,11 @@ interface PasswordValidation {
   passwordsMatch: boolean;
 }
 
-export function OtpPasswordResetDialog({ open, onOpenChange,OTP }: OtpPasswordResetDialogProps) {
+export function OtpPasswordResetDialog({ open, onOpenChange }: OtpPasswordResetDialogProps) {
   // State management
   const [stage, setStage] = useState<DialogStage>(DialogStage.EMAIL);
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(OTP||"");
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -79,7 +77,6 @@ export function OtpPasswordResetDialog({ open, onOpenChange,OTP }: OtpPasswordRe
     hasSpecialChar: false,
     passwordsMatch: false,
   });
-
 
   const timerIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -172,6 +169,8 @@ export function OtpPasswordResetDialog({ open, onOpenChange,OTP }: OtpPasswordRe
       const data: ApiResponse = response.data;
 
       setStage(DialogStage.OTP);
+      setResendLoading(true);
+      startTimer();
       toast.success(`A 6-digit OTP has been sent to your email`);
     } catch (error: any) {
       setErrors({ email: error?.response?.data?.detail || 'something, went wrong' });
@@ -340,7 +339,7 @@ export function OtpPasswordResetDialog({ open, onOpenChange,OTP }: OtpPasswordRe
       </div>
       <div className="text-center">
         {timer > 0 ? (
-          <span className="text-sm text-primary-400">Resend OTP in {timer} sec</span>
+          <span className="text-sm text-primary-main">Resend OTP in {timer} sec</span>
         ) : (
           <button
             onClick={handleResendOtp}
@@ -513,6 +512,24 @@ export function OtpPasswordResetDialog({ open, onOpenChange,OTP }: OtpPasswordRe
     }
   };
 
+  const startTimer = useCallback(() => {
+    setTimer(30);
+    // Clear any existing interval before starting a new one
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+    }
+    timerIntervalRef.current = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerIntervalRef.current!);
+          setResendLoading(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, [timer]);
+
   const handleResendOtp = async () => {
     setResendLoading(true);
     setErrors({});
@@ -522,26 +539,11 @@ export function OtpPasswordResetDialog({ open, onOpenChange,OTP }: OtpPasswordRe
         purpose: 'password_reset',
       });
       setOtp('');
-      setTimer(30);
-
-      // Clear any existing interval before starting a new one
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-      }
-
-      timerIntervalRef.current = setInterval(() => {
-        setTimer((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerIntervalRef.current!);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      startTimer();
       toast.success(`A 6-digit OTP has been sent to your email`);
     } catch (error: any) {
       toast.error(
-        error?.response?.data?.detail || 'An unexpected error occured, Please try again later'
+        error?.response?.data?.detail || 'An unexpected error occured, Please try again later',
       );
       setTimer(0);
     } finally {
