@@ -1775,12 +1775,7 @@ const SpecificChat = () => {
 
                 <div className="flex items-center justify-between w-full mt-2">
                   <div className="flex items-center gap-x-3">
-                    <SettingsDropdown
-                      value={currentSearchMode}
-                      onValueChange={(value: SearchMode) => {
-                        setSearchMode(value);
-                      }}
-                    />
+                    
 
                     {/* <div className="flex items-center gap-x-4">
                       <input
@@ -1806,6 +1801,12 @@ const SpecificChat = () => {
                   </div>
 
                   <div className="flex items-center justify-between">
+                    <SettingsDropdown
+                      value={currentSearchMode}
+                      onValueChange={(value: SearchMode) => {
+                        setSearchMode(value);
+                      }}
+                    />
                     <button
                       disabled={!query.trim() || isProcessing}
                       onClick={() => sendMessage()}

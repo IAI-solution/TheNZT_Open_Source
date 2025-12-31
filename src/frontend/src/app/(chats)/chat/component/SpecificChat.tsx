@@ -3111,12 +3111,7 @@ data-[state=checked]:bg-[rgba(127,178,157,0.16)]
 
                 <div className="flex items-center justify-between w-full mt-2">
                   <div className="flex items-center gap-x-3">
-                    <SettingsDropdown
-                      value={currentSearchMode}
-                      onValueChange={(value: SearchMode) => {
-                        setSearchMode(value);
-                      }}
-                    />
+                   
 
                     {/* <div className="flex items-center gap-x-4">
                       <input
@@ -3155,13 +3150,22 @@ data-[state=checked]:bg-[rgba(127,178,157,0.16)]
                         )}
                       </button>
                     ) : (
-                      <button
+                      <>
+                       <SettingsDropdown
+                      value={currentSearchMode}
+                      onValueChange={(value: SearchMode) => {
+                        setSearchMode(value);
+                      }}
+                    />
+                       <button
                         disabled={!query.trim() || isProcessing}
                         onClick={() => sendMessage()}
                         className="flex items-center justify-center border border-transparent p-2 size-[2.25rem] rounded-full disabled:bg-[rgba(113,161,141,0.10)] disabled:opacity-90 disabled:text-[#818181] text-white bg-[#4B9770]"
                       >
                         <TfiArrowUp size={20} />
                       </button>
+                      </>
+                     
                     )}
                   </div>
                 </div>

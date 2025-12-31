@@ -261,7 +261,7 @@ const ChatArea = () => {
 
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-3">
-                    <SettingsDropdown value={currentSearchMode} onValueChange={handleAgentChange} />
+                   
                     {/* <div className="relative group flex items-center">
                       <button onClick={openDocUpload}>
                         <Paperclip className="sm:size-5 size-4" />
@@ -284,6 +284,7 @@ const ChatArea = () => {
                   </div>
 
                   <div className="flex items-center">
+                     <SettingsDropdown value={currentSearchMode} onValueChange={handleAgentChange} />
                     <button
                       disabled={!query}
                       onClick={sendMessage}
@@ -401,10 +402,7 @@ const ChatArea = () => {
                 <div className="flex items-center justify-between w-full">
                   <div className="flex w-full items-center justify-between">
                     <div className="flex gap-3 items-center">
-                      <SettingsDropdown
-                        value={currentSearchMode}
-                        onValueChange={handleAgentChange}
-                      />
+                     
                       {/* <div className="flex items-center">
                         <input
                           accept=".pdf,.txt,.xlsx"
@@ -428,7 +426,12 @@ const ChatArea = () => {
                       </div> */}
                     </div>
 
-                    <div>
+                    <div className='flex '>
+                       <SettingsDropdown
+                        value={currentSearchMode}
+                        onValueChange={handleAgentChange}
+                        isMobile
+                      />
                       <button
                         disabled={!query}
                         onClick={sendMessage}
