@@ -8,7 +8,7 @@ from fastapi import status
 from src.backend.core.api_limit import apiSecurityFree
 from src.backend.models.model import SessionLog,MessageLog ,ChartBotLogs
 from src.backend.db.mongodb import upsert_chart_log ,ChatContext,get_chartbot_session_logs
-from src.ai.chart_bot.llm_react_agent import start_chat_session
+from src.ai.chart_bot.chart_bot import start_chat_session
 
 router = APIRouter()
 

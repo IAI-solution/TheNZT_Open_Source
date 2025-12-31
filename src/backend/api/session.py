@@ -8,7 +8,7 @@ import time
 import base64
 import tempfile
 
-from src.ai.chart_bot.generate_related_qn import chart_bot_related_query
+from src.ai.chart_bot.chart_bot_utils.generate_related_qn import chart_bot_related_query
 from src.ai.stock_prediction.stock_prediction_functions import get_sentiment_rating, get_stock_history, sarimax_predict
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
