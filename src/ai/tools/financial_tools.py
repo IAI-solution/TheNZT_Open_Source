@@ -689,7 +689,9 @@ class GetStockData(BaseTool):
                     profile_data = profile_response.get("data", {})
                     if isinstance(profile_data, dict) and 'data' in profile_data:
                         profile_data = profile_data['data']
-                    currency_value = profile_data.get("currency")
+                    
+                    if isinstance(profile_data, dict):
+                        currency_value = profile_data.get("currency")
                 
                 # Process realtime data
                 if isinstance(realtime_response, Exception):

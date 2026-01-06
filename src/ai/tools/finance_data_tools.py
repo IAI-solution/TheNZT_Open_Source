@@ -368,7 +368,9 @@ class GetStockData(BaseTool):
                 if exchange_symbol and ticker:
                     try:
                         realtime_response, currency_data = asyncio.run(get_stock_and_currency(ticker, fm_api_key))
-                        realtime_currency = currency_data[0]["currency"] if currency_data else "USD"
+                        realtime_currency = "USD"
+                        if isinstance(currency_data, list) and len(currency_data) > 0 and isinstance(currency_data[0], dict):
+                            realtime_currency = currency_data[0].get("currency", "USD")
                         realtime_response[0]["currency"] = realtime_currency
                         realtime_response = realtime_response[0]
                         realtime_response = {k: v for k, v in realtime_response.items() if v is not None}
