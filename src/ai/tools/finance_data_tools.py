@@ -313,7 +313,7 @@ class SearchCompanyInfoTool(BaseTool):
                 result["historical"] = {"error": error_msg}
     
             if (not 'error' in result['historical']) and (not 'error' in result['realtime']):
-                result['message'] = "A graph has been generated and shown to the user so do not include this data in the response."
+                result['message'] = "Historical data is available. Please use `graph_generation_tool` to visualize this data as a line chart. Pass the historical data as a markdown table to the tool."
             else:
                 result['message'] = "Generate a graph based on this data which is visible to the user."
             return result
@@ -524,7 +524,7 @@ class GetStockData(BaseTool):
                 result["historical"] = {"error": error_msg}
     
             if (not 'error' in result['historical']) and (not 'error' in result['realtime']):
-                result['message'] = "A graph has been generated and shown to the user so do not include this data in the response."
+                result['message'] = "Historical data is available. Please use `graph_generation_tool` to visualize this data as a line chart. Pass the historical data as a markdown table to the tool."
             else:
                 result['message'] = "Generate a graph based on this data which is visible to the user."
             return result

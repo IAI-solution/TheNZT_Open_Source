@@ -30,7 +30,7 @@ class ReportGenerationAgent(BaseAgent):
 
         task = state['current_task']
         user_query = state.get('formatted_user_query', state['user_query'])
-        user_query = user_query + " **Include relevant financial graphs by passing tables to the tool `graph_generation_tool` and include them properly as mentioned in Chart Generation and Visualization Guidelines. Ensure stock price charts are never included in the final response. Provide a detailed, well-structured descriptive report with clear headings, subheadings, and a professional format, covering all relevant financial insights.**"
+        user_query = user_query + " - Use `graph_generation_tool` for numerical data including stock history.\n  - If financial information is present in the context, always generate charts using the `graph_generation_tool` and also make graph of that table using same data.\n  - If the user query is about a public company strictly generate following graphs: Income Statement, Balance Sheet and Cash Flow Statement for available data in the context using `graph_generation_tool`. Also generate a stock price chart if historical data is available. Provide a detailed, well-structured descriptive report with clear headings, subheadings, and a professional format, covering all relevant financial insights.**"
 
         # input_prompt = f"### Latest User Query: {state['user_query']}\n"
         input_prompt = f"### Latest User Query: {user_query}\n\n"

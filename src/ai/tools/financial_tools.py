@@ -1,5 +1,9 @@
 import os
 import aiohttp          
+import yfinance as yf
+import pandas as pd
+import numpy as np
+from src.ai.stock_prediction.stock_prediction_functions import get_rating_stock_price, sarimax_predict
 import asyncio          
 from typing import Dict, Any, Optional, List, Type          
 from datetime import datetime, timedelta, timezone
@@ -781,11 +785,10 @@ class GetStockData(BaseTool):
                 result["historical"] = {"error": f"Failed to fetch data: {str(e)}"}
                 result["realtime"] = {"error": f"Failed to fetch data: {str(e)}", "symbol": ticker}
             
-            if result.get("historical") and "error" not in result["historical"] and result.get("realtime") and "error" not in result["realtime"]:
-                result["message"] = "A graph has been generated and shown to the user so do not include this data in the response."
+            if (not 'error' in result['historical']) and (not 'error' in result['realtime']):
+                result['message'] = "Historical data is available. Please use `graph_generation_tool` to visualize this data as a line chart. Pass the historical data as a markdown table to the tool."
             else:
-                result["message"] = "Generate a graph based on this data which is visible to the user."
-            
+                result['message'] = "Generate a graph based on this data which is visible to the user."
             return result
         
         tasks = [process_single_ticker(t) for t in ticker_data]
@@ -797,13 +800,69 @@ class GetStockData(BaseTool):
 # Pre-created tool instances
 get_financial_statements = FinancialStatementsTool()
 search_company_info = SearchCompanyInfoTool()
+class GetStockDataAndRatingTool(BaseTool):
+    name: str = "get_stock_data_and_rating"
+    description: str = "Get stock data and sentiment rating for a company. Returns a file path to be used for prediction."
+    
+    class InputSchema(BaseModel):
+        company_name: str
+        ticker: str
+
+    args_schema: Type[BaseModel] = InputSchema
+
+    def _run(self, company_name: str, ticker: str) -> Dict[str, Any]:
+        try:
+            ticker_data = [{"company": company_name, "ticker": ticker}]
+            file_path = get_rating_stock_price(ticker_data)
+            
+            if file_path:
+                return {
+                    "success": True,
+                    "file_path": file_path,
+                    "message": f"Stock data saved to: {file_path}"
+                }
+            else:
+                return {
+                    "error": "Failed to save stock data",
+                    "file_path": None
+                }
+        except Exception as e:
+            return {"error": str(e), "file_path": None}
+
+class RunSarimaxPredictionTool(BaseTool):
+    name: str = "run_sarimax_prediction"
+    description: str = "Run SARIMAX prediction on the stock data file."
+    
+    class InputSchema(BaseModel):
+        file_path: str
+        forecast_steps: int = 5
+
+    args_schema: Type[BaseModel] = InputSchema
+
+    def _run(self, file_path: str, forecast_steps: int = 5) -> Dict[str, Any]:
+        try:
+            results = sarimax_predict(file_path, forecast_steps=forecast_steps)
+            return {
+                "success": True,
+                "results": results,
+                "message": f"SARIMAX prediction completed with {forecast_steps} forecast steps"
+            }
+        except Exception as e:
+            return {"error": str(e), "results": None}
+
+get_financial_statements = FinancialStatementsTool()
+search_company_info = SearchCompanyInfoTool()
 get_stock_data = GetStockData()
+get_stock_data_and_rating = GetStockDataAndRatingTool()
+run_sarimax_prediction = RunSarimaxPredictionTool()
 
 
 tool_list = [
     get_financial_statements,
     search_company_info,
     get_stock_data,
+    get_stock_data_and_rating,
+    run_sarimax_prediction,
 ]
 
 
