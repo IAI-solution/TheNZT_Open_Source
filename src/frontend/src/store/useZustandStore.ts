@@ -4,7 +4,7 @@ import { IFinanceData } from '@/components/charts/FinanaceChart';
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
-export type SearchMode = 'fast' | 'agentic-planner' | 'agentic-reasoning' | 'deep-research';
+export type SearchMode = 'fast' | 'agentic-planner' | 'agentic-reasoning';
 
 type MessageState = {
   message: string | null;

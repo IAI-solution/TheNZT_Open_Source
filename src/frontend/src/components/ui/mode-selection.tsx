@@ -19,11 +19,6 @@ const SEARCH_MODES = [
     subtitle: 'Strategic planning through agentic modeling',
   },
   { value: 'agentic-reasoning', title: 'Pro', subtitle: 'Deep reasoning and scenario simulation' },
-  {
-    value: 'deep-research',
-    title: 'Research',
-    subtitle: 'In-depth research of markets, trends, and assets',
-  },
 ] as const;
 
 const DropdownItem = ({
