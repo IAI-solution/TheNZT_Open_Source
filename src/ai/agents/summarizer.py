@@ -8,7 +8,8 @@ from datetime import datetime
 import json
 from dotenv import load_dotenv
 import time
-from src.ai.llm.config import SummarizerConfig
+#from src.ai.llm.config import SummarizerConfig
+from src.ai.llm.config import  SummarizerConfig
 from src.backend.utils.utils import get_unique_response_id
 
 load_dotenv()
