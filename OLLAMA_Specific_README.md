@@ -126,7 +126,9 @@ The following agents were updated to utilize the new multi-provider configuratio
 - **task_validator.py**
 - **utils.py**
 - **validation_agent.py**
+- **validation_agent.py**
 - **web_search_agent.py**
+- **generate_related_qn.py** (in `src/ai/chart_bot/chart_bot_utils/`)
 
 ### Backend Utilities (src/backend/utils/)
 
@@ -134,29 +136,8 @@ Updated to make the pipeline Ollama and multi-LLM provider compatible:
 
 - **agent_comm.py**
 - **utils.py**
+- **generate_related_qn.py** (ChartBot utility)
 
-### Configuration Classes
-
-Each provider config file contains these 17 configuration classes (identical structure across all providers):
-
-| Class Name | Purpose | Temperature Range |
-|------------|---------|------------------|
-| `FastAgentConfig` | Quick response agent | 0.15 - 0.4 |
-| `IntentDetectionConfig` | Query classification | 0.3 - 0.4 |
-| `PlannerConfig` | Task planning | 0.0 (deterministic) |
-| `ExecutorConfig` | Task execution | 0.1 |
-| `ManagerConfig` | Agent coordination | 0.6 |
-| `WebSearchConfig` | Web search operations | 0.1 |
-| `FinanceDataConfig` | Financial data analysis | 0.0 - 0.1 |
-| `ReportGenerationConfig` | Report creation | 0.1 - 0.2 |
-| `TaskValidationConfig` | Task validation | 0.7 |
-| `ValidationConfig` | General validation | 0.6 |
-| `SummarizerConfig` | Content summarization | 0.3 (streaming) |
-| `CountUsageMetricsPricingConfig` | Usage tracking | Varies |
-| `GetRelatedQueriesConfig` | Query suggestions | 0.2 - 0.4 |
-| `GenerateSessionTitleConfig` | Session naming | 0.4 |
-| `StockPredictionConfig` | Financial predictions | 0.0 (deterministic) |
-| `GraphGenerationConfig` | Graph/chart generation | 0.1 - 0.2 |
 
 ### Environment and Documentation Files
 
@@ -453,7 +434,7 @@ Each agent type has specific model configurations:
 | Manager | Coordination | kimi-k2:1t |
 | WebSearch | Web queries | gpt-oss:20b-cloud |
 | FinanceData | Financial analysis | gpt-oss:20b-cloud |
-| ReportGeneration | Report creation | kimi-k2:1t |
+| ReportGeneration | Report creation | minimax-m2:cloud |
 | Summarizer | Content summarization | kimi-k2:1t |
 
 ### Temperature and Token Settings
