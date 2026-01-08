@@ -126,7 +126,9 @@ The following agents were updated to utilize the new multi-provider configuratio
 - **task_validator.py**
 - **utils.py**
 - **validation_agent.py**
+- **validation_agent.py**
 - **web_search_agent.py**
+- **generate_related_qn.py** (in `src/ai/chart_bot/chart_bot_utils/`)
 
 ### Backend Utilities (src/backend/utils/)
 
@@ -134,6 +136,7 @@ Updated to make the pipeline Ollama and multi-LLM provider compatible:
 
 - **agent_comm.py**
 - **utils.py**
+- **generate_related_qn.py** (ChartBot utility)
 
 
 ### Environment and Documentation Files
@@ -431,7 +434,7 @@ Each agent type has specific model configurations:
 | Manager | Coordination | kimi-k2:1t |
 | WebSearch | Web queries | gpt-oss:20b-cloud |
 | FinanceData | Financial analysis | gpt-oss:20b-cloud |
-| ReportGeneration | Report creation | kimi-k2:1t |
+| ReportGeneration | Report creation | minimax-m2:cloud |
 | Summarizer | Content summarization | kimi-k2:1t |
 
 ### Temperature and Token Settings
