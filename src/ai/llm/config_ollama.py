@@ -67,7 +67,7 @@ class FinanceDataConfig:
 
 class ReportGenerationConfig:
     # MODEL = "gemini/gemini-2.5-pro"
-    MODEL="openai/minimax-m2:cloud"
+    MODEL="openai/kimi-k2:1t"
     ALT_MODEL="openai/gpt-oss:20b-cloud"
     # ALT_MODEL = "groq/llama-3.3-70b-versatile"
     TEMPERATURE = 0.1
