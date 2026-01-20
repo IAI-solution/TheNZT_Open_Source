@@ -403,7 +403,7 @@ async def get_company_profile(symbol: str) -> Dict[str, Any]:
     
     try:
         # FMP profile endpoint returns a list
-        data = await _get_fmp(f"api/stable/profile?symbol={symbol}")
+        data = await _get_fmp(f"stable/profile?symbol={symbol}")
         if isinstance(data, list) and len(data) > 0:
             profile = data[0]
             return {
