@@ -941,12 +941,14 @@ async def get_related_queries(
         ticker = realtime.get("symbol", "")
         exchange = realtime.get("exchange", "")
         context_data = [realtime, historical]
-        
+        user_query = message_log.human_input.get("user_query", "") if message_log.human_input else ""
+
         queries = await chart_bot_related_query(
             name=name,
             ticker=ticker,
             exchange=exchange,
-            context_data=context_data
+            context_data=context_data,
+            user_query=user_query
         )
         return {"related_queries": queries}
     except Exception as e:

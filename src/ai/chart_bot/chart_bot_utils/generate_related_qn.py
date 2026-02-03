@@ -17,16 +17,41 @@ class RelatedQueries(BaseModel):
     related_queries: Optional[List[str]] = Field(description="List of four stock chart or crypto chart related questions that are strictly related to stock or crypto mentioned")
 
 
-async def chart_bot_related_query(name: str, ticker: str, exchange: str, context_data: List[dict]) -> List[str]:
+def detect_query_language(text: str) -> str:
+    """
+    Detect if text is primarily English or Hindi based on character analysis.
+    Returns 'english' or 'hindi'.
+    """
+    if not text:
+        return 'english'
+
+    # Count Devanagari characters (Hindi script range: U+0900 to U+097F)
+    devanagari_count = sum(1 for char in text if '\u0900' <= char <= '\u097F')
+    # Count ASCII letters
+    ascii_count = sum(1 for char in text if char.isascii() and char.isalpha())
+
+    # If more than 10% of alphabetic characters are Devanagari, consider it Hindi
+    total_alpha = devanagari_count + ascii_count
+    if total_alpha > 0 and (devanagari_count / total_alpha) > 0.1:
+        return 'hindi'
+    return 'english'
+
+
+async def chart_bot_related_query(name: str, ticker: str, exchange: str, context_data: List[dict], user_query: str = "") -> List[str]:
     """
     Args:
         name: The name of the company or cryptocurrency.
         ticker: The ticker symbol (e.g., 'AAPL') or crypto symbol (e.g., 'BTCUSD').
         exchange: The exchange it trades on (e.g., 'NASDAQ' or 'Crypto').
+        user_query: The user's original query to match language.
     """
-    
+
+    # Detect language of user query
+    detected_language = detect_query_language(user_query)
+    print(f"chart_bot_related_query - Detected language: {detected_language} (from query: {user_query})")
+
     # input = "The following are the user queries from previous interactions from oldest to latest:\n"
-    system_prompt = """
+    system_prompt = f"""
     Generate 4 questions regarding stock chart or crypto chart for the following information.
     """
 
@@ -51,6 +76,22 @@ async def chart_bot_related_query(name: str, ticker: str, exchange: str, context
         """
 
     input = system_prompt + base_context
+
+    # Add explicit language instruction at the END (more effective position)
+    if detected_language == 'english':
+        language_instruction = """
+
+    **CRITICAL LANGUAGE REQUIREMENT**: You MUST generate ALL 4 questions in ENGLISH ONLY.
+    Do NOT use Hindi, Devanagari script, or any other language. Every single question must be written entirely in English.
+    The company name may be Indian but your output MUST be in English.
+    """
+    else:
+        language_instruction = """
+
+    **CRITICAL LANGUAGE REQUIREMENT**: You MUST generate ALL 4 questions in HINDI ONLY.
+    Use Devanagari script. Every single question must be written entirely in Hindi.
+    """
+    input += language_instruction
 
     if llm_provider == "ollama":
         input += '''

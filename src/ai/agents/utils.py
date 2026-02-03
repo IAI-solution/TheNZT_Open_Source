@@ -211,18 +211,46 @@ def get_context_based_answer_prompt(context: str, query: str) -> str:
     return "\n".join(prompt)
 
 
+def detect_query_language(text: str) -> str:
+    """
+    Detect if text is primarily English or Hindi based on character analysis.
+    Returns 'english' or 'hindi'.
+    """
+    if not text:
+        return 'english'
+
+    # Count Devanagari characters (Hindi script range: U+0900 to U+097F)
+    devanagari_count = sum(1 for char in text if '\u0900' <= char <= '\u097F')
+    # Count ASCII letters
+    ascii_count = sum(1 for char in text if char.isascii() and char.isalpha())
+
+    # If more than 10% of alphabetic characters are Devanagari, consider it Hindi
+    total_alpha = devanagari_count + ascii_count
+    if total_alpha > 0 and (devanagari_count / total_alpha) > 0.1:
+        return 'hindi'
+    return 'english'
+
+
 def get_related_queries_util(previous_messages: dict) -> List[str]:
     # input = "The following are the user queries from previous interactions from oldest to latest:\n"
     input = """
-    You are given a list of user search queries and corresponding AI responses from a past interaction, ordered from oldest to latest. Your task is to generate four related search queries that a user might ask next or that are semantically similar to the original queries, taking into account both the user query and the AI response. All generated queries must focus on financial or economic aspects related to the topic of the original query and response. The queries should be concise, relevant, and designed to explore financial implications, economic impacts, or business-related angles. Generate the queries same language as the response generasted by the AI.
+    You are given a list of user search queries and corresponding AI responses from a past interaction, ordered from oldest to latest. Your task is to generate four related search queries that a user might ask next or that are semantically similar to the original queries, taking into account both the user query and the AI response. All generated queries must focus on financial or economic aspects related to the topic of the original query and response. The queries should be concise, relevant, and designed to explore financial implications, economic impacts, or business-related angles.
     """
 
     print(f"previous_messages = {previous_messages['messages']}")
+
+    # Extract user query for language detection
+    user_query_text = ""
     for msg in previous_messages['messages'][-1:]:
+        user_query_text = msg[0]
         input += f" User Query: {msg[0]}\n"
         input += f" AI Answer: {msg[1]}\n"
-    
+
+    # Detect language of user query
+    detected_language = detect_query_language(user_query_text)
+
     print("From get_related_queries_util")
+    print(f"Detected language: {detected_language} (from query: {user_query_text[:50]}...)" if len(user_query_text) > 50 else f"Detected language: {detected_language} (from query: {user_query_text})")
     print(f"input = {input}")
         
     input += '''### Guidelines to generate the related queries:
@@ -262,6 +290,21 @@ def get_related_queries_util(previous_messages: dict) -> List[str]:
     #             Return **exactly 4** related queries, formatted as a list with each query on a new line. 
     #             Do not explain or add extra commentary.
     #         '''
+
+    # Add explicit language instruction at the END (more effective position)
+    if detected_language == 'english':
+        language_instruction = """
+
+    **CRITICAL LANGUAGE REQUIREMENT**: The User Query is in ENGLISH. You MUST generate ALL 4 related queries in ENGLISH ONLY.
+    Do NOT use Hindi, Devanagari script, or any other language. Every single query must be written entirely in English.
+    """
+    else:
+        language_instruction = """
+
+    **CRITICAL LANGUAGE REQUIREMENT**: The User Query is in HINDI. You MUST generate ALL 4 related queries in HINDI ONLY.
+    Use Devanagari script. Every single query must be written entirely in Hindi.
+    """
+    input += language_instruction
 
     # Append schema instruction to input
     schema_instruction = f"\n\nYou must return the output as a valid JSON object matching this schema:\n{json.dumps(RelatedQueries.model_json_schema(), indent=2)}\n\nDo not include any text outside the JSON object."
